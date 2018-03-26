@@ -42,31 +42,38 @@ loadFGData fgroot = do
   fixes <- loadFixes fgroot
   return $ FGData airports navs fixes
 
-loadFGDataCache :: FilePath -> IO (Maybe FGData)
-loadFGDataCache cacheDir =
+loadFGDataCache :: FilePath -> FilePath -> IO (Maybe FGData)
+loadFGDataCache cacheDir fgroot =
   go `catch` handle
   where
     go = do
       let filename = cacheDir </> "cache.json"
-      JSON.decodeFileStrict filename
+      JSON.decodeFileStrict filename >>= \case
+        Just (fgroot', fgdata) ->
+          if fgroot' == fgroot then
+            return fgdata
+          else
+            return Nothing
+        Nothing ->
+          return Nothing
     handle :: SomeException -> IO (Maybe FGData)
     handle err = do
       hPutStrLn stderr $ show err
       return Nothing
 
-saveFGDataCache :: FilePath -> FGData -> IO ()
-saveFGDataCache cacheDir fgdata = do
+saveFGDataCache :: FilePath -> FilePath -> FGData -> IO ()
+saveFGDataCache cacheDir fgroot fgdata = do
   let filename = cacheDir </> "cache.json"
-  JSON.encodeFile filename fgdata
+  JSON.encodeFile filename (fgroot, fgdata)
 
 loadFGDataCached :: FilePath -> FilePath -> IO FGData
 loadFGDataCached cacheDir fgroot = do
-  loadFGDataCache cacheDir >>= \case
+  loadFGDataCache cacheDir fgroot >>= \case
     Just fgdata ->
       return fgdata
     Nothing -> do
       fgdata <- loadFGData fgroot
-      saveFGDataCache cacheDir fgdata
+      saveFGDataCache cacheDir fgroot fgdata
       return fgdata
 
 tee :: (a -> IO b) -> IO a -> IO a

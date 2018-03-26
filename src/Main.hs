@@ -13,6 +13,7 @@ import qualified Graphics.Rendering.Cairo as Cairo
 import Text.Printf
 import System.Environment
 import Data.List
+import Data.Maybe
 
 mkLat :: Int -> Double -> Latitude
 mkLat deg min = Latitude $ fromIntegral deg + min / 60
@@ -25,8 +26,9 @@ main :: IO ()
 main = do
   args <- getArgs
   home <- getEnv "HOME"
-  let fgroot = "/usr/share/games/flightgear"
-      cacheDir = home </> ".fgtoolbox"
+  fgroot <- fromMaybe "/usr/share/games/flightgear"
+              <$> lookupEnv "FGROOT"
+  let cacheDir = home </> ".fgtoolbox"
   case args of
     "vornav":rem -> case rem of
       [fromID, toID] -> do
