@@ -8,6 +8,7 @@ import Data.Text (Text)
 import qualified Data.Text as Text
 import Data.Maybe
 import Debug.Trace
+import Text.Read (readMaybe)
 
 parseFix :: String -> Maybe Fix
 parseFix str = case words str of
@@ -114,21 +115,19 @@ parseLatLng latStr lngStr = do
   return $ LatLng lat lng
 
 parseLat :: String -> Maybe Latitude
-parseLat = Just . Latitude . read
+parseLat = fmap Latitude . readMaybe
 
 parseLng :: String -> Maybe Longitude
-parseLng = Just . Longitude . read
+parseLng = fmap Longitude . readMaybe
 
 parseAltitude :: String -> Maybe Altitude
-parseAltitude = Just . Altitude . read
+parseAltitude = fmap Altitude . readMaybe
 
 parseKHz :: String -> Maybe NavFreq
-parseKHz = Just . NavFreq . read
+parseKHz = fmap NavFreq . readMaybe
 
 parseDistance :: String -> Maybe Distance
-parseDistance = Just . Distance . read
+parseDistance = fmap Distance . readMaybe
 
 parseBearing :: String -> Maybe Bearing
-parseBearing = Just . Bearing . read
-
-
+parseBearing = fmap Bearing . readMaybe

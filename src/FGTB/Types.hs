@@ -1,5 +1,8 @@
 {-#LANGUAGE GeneralizedNewtypeDeriving #-}
 {-#LANGUAGE OverloadedStrings #-}
+{-#LANGUAGE OverloadedLists #-}
+{-#LANGUAGE LambdaCase #-}
+{-#LANGUAGE TemplateHaskell #-}
 module FGTB.Types
 where
 
@@ -10,21 +13,40 @@ import Text.Printf
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.List
+import Data.Aeson (FromJSON (..), ToJSON (..), (.:))
+import qualified Data.Aeson as JSON
+import Data.Aeson.TH (deriveJSON, defaultOptions, Options (..))
+import Data.Char (toLower, toUpper)
+import Data.Monoid
+import Text.Read (readMaybe)
 
 newtype Latitude =
   -- In degrees
   Latitude Double
-  deriving (Read, Show, Eq, Ord, Num, Fractional)
+  deriving (Read, Show, Eq, Ord, Num, Fractional, FromJSON, ToJSON)
 
 newtype Longitude =
   -- In degrees
   Longitude Double
-  deriving (Read, Show, Eq, Ord, Num, Fractional)
+  deriving (Read, Show, Eq, Ord, Num, Fractional, FromJSON, ToJSON)
 
 data LatLng =
   -- In degrees
   LatLng { lat :: Latitude, lng :: Longitude }
   deriving (Read, Show, Eq)
+
+instance ToJSON LatLng where
+  toJSON ll = toJSON (lat ll, lng ll)
+
+instance FromJSON LatLng where
+  parseJSON = \case
+    JSON.Object obj ->
+      LatLng <$> obj .: "lat"
+             <*> obj .: "lng"
+    val@(JSON.Array _) -> do
+      (latVal, lngVal) <- parseJSON val
+      return $ LatLng latVal lngVal
+    x -> fail $ "Invalid LatLng value: " <> show x
 
 avgLatLng :: [LatLng] -> LatLng
 avgLatLng [] = LatLng 0 0
@@ -38,26 +60,30 @@ avgLatLng lls =
 newtype Distance =
   -- In nautical miles
   Distance Double
-  deriving (Read, Show, Eq, Ord, Num, PrintfArg, Fractional)
+  deriving (Read, Show, Eq, Ord, Num, PrintfArg, Fractional, ToJSON, FromJSON)
 
 newtype Altitude =
   -- In feet
   Altitude Double
-  deriving (Read, Show, Eq, Ord, Num, PrintfArg)
+  deriving (Read, Show, Eq, Ord, Num, PrintfArg, ToJSON, FromJSON)
 
 newtype Bearing =
   -- In degrees
   Bearing Double
-  deriving (Read, Show, Eq, Ord, Num)
+  deriving (Read, Show, Eq, Ord, Num, ToJSON, FromJSON)
 
 newtype NavID = NavID Text
-  deriving (IsString, Read, Show, Eq, Ord, PrintfArg)
+  deriving (IsString, Read, Show, Eq, Ord, PrintfArg, ToJSON, FromJSON)
 
 mkNavID :: String -> NavID
 mkNavID = NavID . Text.pack
 
 data Fix = Fix { fixID :: NavID, fixLoc :: LatLng }
   deriving (Read, Show, Eq)
+
+deriveJSON
+  defaultOptions { fieldLabelModifier = map toLower . drop 3 }
+  ''Fix
 
 data NavTy
   = NDB -- 2
@@ -72,8 +98,21 @@ data NavTy
   | TACAN -- 13
   deriving (Read, Show, Eq, Enum, Ord, Bounded)
 
+instance ToJSON NavTy where
+  toJSON = toJSON . Text.pack . show
+
+instance FromJSON NavTy where
+  parseJSON val = do
+    valueMay <- readMaybe .
+                map toUpper .
+                Text.unpack <$>
+                parseJSON val
+    case valueMay of
+      Nothing -> fail $ "Invalid NAV type: " <> show val
+      Just x -> return x
+
 newtype NavFreq = NavFreq Integer -- in kHz
-  deriving (Eq, Ord)
+  deriving (Eq, Ord, ToJSON, FromJSON)
 
 instance Show NavFreq where
   show (NavFreq freq)
@@ -106,6 +145,10 @@ data Nav =
     }
     deriving (Show, Eq)
 
+deriveJSON
+  defaultOptions { fieldLabelModifier = map toLower . drop 3 }
+  ''Nav
+
 isVor :: Nav -> Bool
 isVor nav =
   navTy nav == VOR &&
@@ -134,6 +177,14 @@ data Runway
       , rwyEndName :: Text
       }
       deriving (Show, Eq)
+
+deriveJSON
+  defaultOptions { fieldLabelModifier = map toLower . drop 3 }
+  ''Runway
+
+deriveJSON
+  defaultOptions { fieldLabelModifier = map toLower . drop 7 }
+  ''Airport
 
 airportLoc :: Airport -> LatLng
 airportLoc ap = avgLatLng $
