@@ -31,6 +31,7 @@ executable fgtoolbox
                , cairo
                , containers
                , filepath
+               , ini
                , lens
                , megaparsec
                , mtl

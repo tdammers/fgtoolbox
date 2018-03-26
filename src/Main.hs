@@ -1,3 +1,4 @@
+{-#LANGUAGE OverloadedStrings #-}
 module Main where
 
 import FGTB.Types
@@ -14,6 +15,10 @@ import Text.Printf
 import System.Environment
 import Data.List
 import Data.Maybe
+import Data.Ini (readIniFile)
+import qualified Data.Ini as Ini
+import qualified Data.Text as Text
+import System.IO
 
 mkLat :: Int -> Double -> Latitude
 mkLat deg min = Latitude $ fromIntegral deg + min / 60
@@ -21,13 +26,19 @@ mkLat deg min = Latitude $ fromIntegral deg + min / 60
 mkLng :: Int -> Double -> Longitude
 mkLng deg min = Longitude $ fromIntegral deg + min / 60
 
-
 main :: IO ()
 main = do
   args <- getArgs
   home <- getEnv "HOME"
-  fgroot <- fromMaybe "/usr/share/games/flightgear"
+  let fgrootDef = "/usr/share/games/flightgear"
+  fgIni <- (readIniFile $ home </> ".fgfs/FlightGear/FlightGear.ini")
+           >>= either error return
+  let fgrootIni =
+        either (const fgrootDef) Text.unpack $
+          Ini.lookupValue "General" "fg-root" fgIni
+  fgroot <- fromMaybe fgrootIni
               <$> lookupEnv "FGROOT"
+  hPutStrLn stderr $ printf "$FGROOT=%s" fgroot
   let cacheDir = home </> ".fgtoolbox"
   case args of
     "vornav":rem -> case rem of
