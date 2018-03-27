@@ -3,28 +3,33 @@ module FGTB.Route
 where
 
 import FGTB.Types
-import qualified Data.Geo as Geo
-import Data.Geo ((!.!))
-import qualified Data.Geo.Vincenty as Vincenty
-import Data.Geo.Accessor.Value (value)
 import Data.List
 import qualified Data.Set as Set
 import Data.Set (Set)
 import FGTB.AStar (aStar)
 import Debug.Trace
+import qualified Numeric.Units.Dimensional as D
+import qualified Numeric.Units.Dimensional.SIUnits as D
+import qualified Numeric.Units.Dimensional.NonSI as D
+import qualified Geodetics.Geodetic as Geo
+import Data.Maybe
 
-toCoord :: LatLng -> Geo.Coord
+toCoord :: LatLng -> Geo.Geodetic Geo.WGS84
 toCoord (LatLng (Latitude latDeg) (Longitude lngDeg)) =
-  latDeg !.! lngDeg
+  Geo.Geodetic
+    (latDeg D.*~ D.degree)
+    (lngDeg D.*~ D.degree)
+    (0 D.*~ D.meter)
+    Geo.WGS84
 
 llDiff :: LatLng -> LatLng -> (Distance, Bearing, Bearing)
 llDiff from to =
-  let gc = Vincenty.inverse () (toCoord from) (toCoord to)
-      distRaw = Geo.ellipsoidalDistance gc
-      dist = mToNm distRaw
-      bearingFrom = Bearing . value . Geo.azi $ gc
-      bearingTo = Bearing . value . Geo.reverseAzi $ gc
-  in (dist, bearingFrom, bearingTo)
+  fromMaybe (Distance 0, Bearing 0, Bearing 180) $ do
+    (distRaw, aziRaw, revAziRaw) <- Geo.groundDistance (toCoord from) (toCoord to)
+    let dist = Distance $ distRaw D./~ D.nauticalMile
+        bearingFrom = Bearing $ aziRaw D./~ D.degree
+        bearingTo = Bearing $ revAziRaw D./~ D.degree
+    return (dist, bearingFrom, bearingTo)
 
 llDist :: LatLng -> LatLng -> Distance
 llDist from to =
