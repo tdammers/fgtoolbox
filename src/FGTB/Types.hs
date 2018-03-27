@@ -70,7 +70,7 @@ newtype Altitude =
 newtype Bearing =
   -- In degrees
   Bearing Double
-  deriving (Read, Show, Eq, Ord, Num, ToJSON, FromJSON)
+  deriving (Read, Show, Eq, Ord, Num, PrintfArg, ToJSON, FromJSON)
 
 newtype NavID = NavID Text
   deriving (IsString, Read, Show, Eq, Ord, PrintfArg, ToJSON, FromJSON)
@@ -216,6 +216,3 @@ waypointTyN (NavWP nav) = Text.pack . show . navTy $ nav
 waypointTyN (FixWP _) = "FIX"
 waypointTyN (GpsWP _) = "GPS"
 waypointTyN (AirportWP _) = "AIRPORT"
-
-findWaypoint :: NavID -> [Waypoint] -> [Waypoint]
-findWaypoint nid = filter ((== nid) . waypointID)

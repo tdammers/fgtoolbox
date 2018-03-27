@@ -11,6 +11,7 @@ import Data.List
 import qualified Data.Set as Set
 import Data.Set (Set)
 import FGTB.AStar (aStar)
+import Debug.Trace
 
 toCoord :: LatLng -> Geo.Coord
 toCoord (LatLng (Latitude latDeg) (Longitude lngDeg)) =
@@ -110,3 +111,39 @@ vorToVor navs from to =
         range = case wp of
           NavWP nav -> navRange nav
           _ -> 0
+
+findWaypoints :: NavID -> [Waypoint] -> [Waypoint]
+findWaypoints nid = filter ((== nid) . waypointID)
+
+findWaypoint :: NavID -> [Waypoint] -> Maybe Waypoint
+findWaypoint nid waypoints =
+  case candidates of
+    [x] -> Just x
+    [] -> Nothing
+  where
+    candidates =
+      findWaypoints nid waypoints
+
+findWaypointNear :: NavID -> LatLng -> [Waypoint] -> Maybe Waypoint
+findWaypointNear nid targetLoc waypoints =
+  case candidates of
+    x:_ -> Just x
+    [] -> Nothing
+  where
+    candidates =
+      sortOn (llDist targetLoc . waypointLoc) $
+      findWaypoints nid waypoints
+
+resolveRoute :: [NavID] -> [Waypoint] -> Either NavID [Waypoint]
+resolveRoute navs waypoints = go Nothing navs
+  where
+    go :: Maybe Waypoint -> [NavID] -> Either NavID [Waypoint]
+    go _ [] = Right []
+    go current (x:xs) = do
+      wp <- maybe (Left x) Right $ case current of
+        Nothing ->
+          findWaypoint x waypoints
+        Just ref ->
+          findWaypointNear x (waypointLoc ref) waypoints
+      rest <- go (Just wp) xs
+      return $ wp:rest

@@ -38,7 +38,6 @@ main = do
           Ini.lookupValue "General" "fg-root" fgIni
   fgroot <- fromMaybe fgrootIni
               <$> lookupEnv "FGROOT"
-  hPutStrLn stderr $ printf "$FGROOT=%s" fgroot
   let cacheDir = home </> ".fgtoolbox"
   case args of
     "vornav":rem -> case rem of
@@ -46,16 +45,44 @@ main = do
         fgdata <- loadFGDataCached cacheDir fgroot
         runVorToVor fgdata (mkNavID fromID) (mkNavID toID)
       xs -> error $ "Invalid arguments for VOR-to-VOR navigation"
+    "printroute":rem -> do
+      fgdata <- loadFGDataCached cacheDir fgroot
+      runPrintRoute fgdata (map mkNavID rem)
     xs -> error $ "Invalid arguments"
 
+runPrintRoute :: FGData -> [NavID] -> IO ()
+runPrintRoute fgd ids = do
+  let waypoints = fgdWaypoints fgd
+  case resolveRoute ids waypoints of
+    Left wpID -> do
+      error $ "Waypoint not found or ambiguous: " ++ show wpID
+    Right wps -> do
+      printWPs wps
+  where
+    printWPs :: [Waypoint] -> IO ()
+    printWPs [] = do
+      return ()
+    printWPs [x] = do
+      printWPInfo x
+    printWPs (x:x':xs) = do
+      printWPInfo x
+      printLegInfo x x'
+      printWPs (x':xs)
+
+    printWPInfo :: Waypoint -> IO ()
+    printWPInfo wp = do
+      printf "%s\n" (waypointID wp)
+
+    printLegInfo :: Waypoint -> Waypoint -> IO ()
+    printLegInfo a b = do
+      let (dist, bearFrom, bearTo) =
+            llDiff (waypointLoc a) (waypointLoc b)
+      printf "%3.1f nm, %03.1f° T\n" dist bearFrom
+
 runVorToVor :: FGData -> NavID -> NavID -> IO ()
-runVorToVor (FGData airports navs fixes) fromID toID = do
-  let waypoints =
-        concat
-          [ map NavWP navs
-          , map FixWP fixes
-          , map AirportWP airports
-          ]
+runVorToVor fgd fromID toID = do
+  let waypoints = fgdWaypoints fgd
+      navs = fgdNavs fgd
       vors = filter isVor navs
       ndbs = filter isNdb navs
       findWP wpID = case filter (\wp -> waypointID wp == wpID) waypoints of
