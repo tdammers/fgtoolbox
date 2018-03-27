@@ -57,6 +57,33 @@ avgLatLng lls =
   where
     count = length lls
 
+prettyLatLng :: LatLng -> String
+prettyLatLng (LatLng lat lng) =
+  prettyLat lat ++ " " ++ prettyLng lng
+
+prettyLat :: Latitude -> String
+prettyLat (Latitude l)
+  | l >= 0 = prettyAngle fmt (abs l) ++ "N"
+  | otherwise = prettyAngle fmt (abs l) ++ "S"
+  where
+    fmt = "%02i°%02i'%02.4f\""
+
+prettyLng :: Longitude -> String
+prettyLng (Longitude l)
+  | l >= 0 = prettyAngle fmt (abs l) ++ "E"
+  | otherwise = prettyAngle fmt (abs l) ++ "W"
+  where
+    fmt = "%03i°%02i'%02.4f\""
+
+prettyAngle :: String -> Double -> String
+prettyAngle fmt alpha =
+  printf fmt
+    deg min sec
+  where
+    deg = floor alpha :: Int
+    min = floor (alpha * 60) `mod` 60 :: Int
+    sec = alpha * 3600 - fromIntegral deg * 3600 - fromIntegral min * 60 :: Double
+
 newtype Distance =
   -- In nautical miles
   Distance Double

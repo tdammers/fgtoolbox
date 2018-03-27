@@ -48,7 +48,58 @@ main = do
     "printroute":rem -> do
       fgdata <- loadFGDataCached cacheDir fgroot
       runPrintRoute fgdata (map mkNavID rem)
+    "info":rem -> do
+      fgdata <- loadFGDataCached cacheDir fgroot
+      runWPInfo fgdata (map mkNavID rem)
     xs -> error $ "Invalid arguments"
+
+runWPInfo :: FGData -> [NavID] -> IO ()
+runWPInfo fgd ids = do
+  mapM_ runWP (ids >>= flip findWaypoints (fgdWaypoints fgd))
+  where
+    waypoints = fgdWaypoints fgd
+    navs = fgdNavs fgd
+    vors = filter isVor navs
+
+    runWP :: Waypoint -> IO ()
+    runWP wp = do
+      let nearbyVors = nearestNavs (waypointLoc wp) $ vorsInRange (waypointLoc wp) vors
+      printf "%s (%s)\n  %s\n"
+        (waypointID wp)
+        (waypointTyN wp)
+        (prettyLatLng $ waypointLoc wp)
+      case wp of
+        AirportWP ap -> do
+          printf "  %s\n" $ airportName ap
+          printf "  Runways:\n"
+          forM_ (airportRunways ap) $ \rwy -> do
+            printf
+              "    - %s/%s (%1.0f ft)\n"
+              (rwyStartName rwy)
+              (rwyEndName rwy)
+              (nmToFeet $
+                llDist
+                  (rwyStartLoc rwy)
+                  (rwyEndLoc rwy))
+        NavWP nav -> do
+          printf "  %s %s\n"
+            (show . navFreq $ nav)
+            (navName nav)
+        _ -> pure ()
+      printf "  nearby VOR stations:\n"
+      forM_ nearbyVors $ \vor -> do
+        let (dist, bearing, _) = llDiff (navLoc vor) (waypointLoc wp)
+            radialRaw = bearing - navNorth vor
+            radial =
+              if radialRaw < 1 then
+                radialRaw + 360
+              else if radialRaw >= 361 then
+                radialRaw - 360
+              else
+                radialRaw
+                    
+        printf "    - %5.1f nm %s %05.1f (%05.1f°T) [%6s]\n"
+          dist (navID vor) radial bearing (show $ navFreq vor)
 
 runPrintRoute :: FGData -> [NavID] -> IO ()
 runPrintRoute fgd ids = do

@@ -24,7 +24,7 @@ toCoord (LatLng (Latitude latDeg) (Longitude lngDeg)) =
 
 llDiff :: LatLng -> LatLng -> (Distance, Bearing, Bearing)
 llDiff from to =
-  fromMaybe (Distance 0, Bearing 0, Bearing 180) $ do
+  fromMaybe (Distance (1/0), Bearing 0, Bearing 180) $ do
     (distRaw, aziRaw, revAziRaw) <- Geo.groundDistance (toCoord from) (toCoord to)
     let dist = Distance $ distRaw D./~ D.nauticalMile
         bearingFrom = Bearing $ aziRaw D./~ D.degree
@@ -49,8 +49,18 @@ llBearingTo from to =
   where
     (_, _, bearing) = llDiff from to
 
+metersPerNm = 1852
+metersPerFoot = 0.3048
+
 mToNm :: Double -> Distance
-mToNm m = Distance (m / 1852)
+mToNm m = Distance (m / metersPerNm)
+
+mToFeet :: Double -> Altitude
+mToFeet m = Altitude (m / metersPerFoot)
+
+nmToFeet :: Distance -> Altitude
+nmToFeet (Distance nm) =
+  mToFeet $ nm * metersPerNm
 
 vorsInRange :: LatLng -> [Nav] -> [Nav]
 vorsInRange pos = filter (isVorInRange pos)
