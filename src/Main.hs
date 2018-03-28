@@ -6,6 +6,10 @@ import FGTB.Parse
 import FGTB.Map
 import FGTB.Route
 import FGTB.FGData
+import FGTB.Action.Class
+import FGTB.Actions
+import FGTB.CLI
+
 import Control.Monad
 import qualified Data.ByteString.Lazy.Char8 as LBS8
 import System.FilePath
@@ -19,12 +23,7 @@ import Data.Ini (readIniFile)
 import qualified Data.Ini as Ini
 import qualified Data.Text as Text
 import System.IO
-
-mkLat :: Int -> Double -> Latitude
-mkLat deg min = Latitude $ fromIntegral deg + min / 60
-
-mkLng :: Int -> Double -> Longitude
-mkLng deg min = Longitude $ fromIntegral deg + min / 60
+import Data.Proxy
 
 main :: IO ()
 main = do
@@ -40,17 +39,24 @@ main = do
               <$> lookupEnv "FGROOT"
   let cacheDir = home </> ".fgtoolbox"
   case args of
-    "vornav":rem -> case rem of
-      [fromID, toID] -> do
+    "vornav":rem -> do
         fgdata <- loadFGDataCached cacheDir fgroot
-        runVorToVor fgdata (mkNavID fromID) (mkNavID toID)
-      xs -> error $ "Invalid arguments for VOR-to-VOR navigation"
+        cliAction
+          (Proxy :: Proxy VornavRequest)
+          fgdata
+          rem
     "printroute":rem -> do
-      fgdata <- loadFGDataCached cacheDir fgroot
-      runPrintRoute fgdata (map mkNavID rem)
+        fgdata <- loadFGDataCached cacheDir fgroot
+        cliAction
+          (Proxy :: Proxy PrintRouteRequest)
+          fgdata
+          rem
     "info":rem -> do
-      fgdata <- loadFGDataCached cacheDir fgroot
-      runWPInfo fgdata (map mkNavID rem)
+        fgdata <- loadFGDataCached cacheDir fgroot
+        cliAction
+          (Proxy :: Proxy WPInfoRequest)
+          fgdata
+          rem
     xs -> error $ "Invalid arguments"
 
 runWPInfo :: FGData -> [NavID] -> IO ()

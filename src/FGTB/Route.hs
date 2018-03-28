@@ -13,6 +13,7 @@ import qualified Numeric.Units.Dimensional.SIUnits as D
 import qualified Numeric.Units.Dimensional.NonSI as D
 import qualified Geodetics.Geodetic as Geo
 import Data.Maybe
+import Text.Printf
 
 toCoord :: LatLng -> Geo.Geodetic Geo.WGS84
 toCoord (LatLng (Latitude latDeg) (Longitude lngDeg)) =
@@ -23,13 +24,16 @@ toCoord (LatLng (Latitude latDeg) (Longitude lngDeg)) =
     Geo.WGS84
 
 llDiff :: LatLng -> LatLng -> (Distance, Bearing, Bearing)
-llDiff from to =
-  fromMaybe (Distance (1/0), Bearing 0, Bearing 180) $ do
-    (distRaw, aziRaw, revAziRaw) <- Geo.groundDistance (toCoord from) (toCoord to)
-    let dist = Distance $ distRaw D./~ D.nauticalMile
-        bearingFrom = Bearing $ aziRaw D./~ D.degree
-        bearingTo = Bearing $ revAziRaw D./~ D.degree
-    return (dist, bearingFrom, bearingTo)
+llDiff from to
+  | from == to =
+    (Distance 0, Bearing 0, Bearing 180)
+  | otherwise =
+    fromMaybe (mToNm (1/0), Bearing 0, Bearing 180) $ do
+      (distRaw, aziRaw, revAziRaw) <- Geo.groundDistance (toCoord from) (toCoord to)
+      let dist = Distance $ distRaw D./~ D.nauticalMile
+          bearingFrom = Bearing $ aziRaw D./~ D.degree
+          bearingTo = Bearing $ revAziRaw D./~ D.degree
+      return (dist, bearingFrom, bearingTo)
 
 llDist :: LatLng -> LatLng -> Distance
 llDist from to =
@@ -75,7 +79,7 @@ isVorInRange' :: Distance -> LatLng -> Nav -> Bool
 isVorInRange' addDist pos nav =
   let dist = llDist pos (navLoc nav)
       range = navRange nav + addDist
-  in dist <= range
+  in dist <= range * 0.5
 
 nearestNavs :: LatLng -> [Nav] -> [Nav]
 nearestNavs pos navs =

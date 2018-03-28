@@ -25,10 +25,16 @@ newtype Latitude =
   Latitude Double
   deriving (Read, Show, Eq, Ord, Num, Fractional, FromJSON, ToJSON)
 
+mkLat :: Int -> Double -> Latitude
+mkLat deg min = Latitude $ fromIntegral deg + min / 60
+
 newtype Longitude =
   -- In degrees
   Longitude Double
   deriving (Read, Show, Eq, Ord, Num, Fractional, FromJSON, ToJSON)
+
+mkLng :: Int -> Double -> Longitude
+mkLng deg min = Longitude $ fromIntegral deg + min / 60
 
 data LatLng =
   -- In degrees
@@ -243,3 +249,9 @@ waypointTyN (NavWP nav) = Text.pack . show . navTy $ nav
 waypointTyN (FixWP _) = "FIX"
 waypointTyN (GpsWP _) = "GPS"
 waypointTyN (AirportWP _) = "AIRPORT"
+
+waypointName :: Waypoint -> Text
+waypointName (NavWP nav) = navName nav
+waypointName (AirportWP ap) = airportName ap
+waypointName (FixWP _) = "fix"
+waypointName (GpsWP ll) = Text.pack . prettyLatLng $ ll
