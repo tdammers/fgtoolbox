@@ -19,10 +19,11 @@ instance PrintableResult () where
 cliAction :: forall rq rp.
              (Action rq rp, FromArgs rq, PrintableResult rp)
           => Proxy rq
-          -> FGData
+          -> IO FGData
           -> [String]
           -> IO ()
-cliAction _ fgdata args = do
+cliAction _ loadFGData args = do
   rq :: rq <- either error return $ fromArgs args
+  fgdata <- loadFGData
   rp :: rp <- runAction fgdata rq
   printResult putStr rp
