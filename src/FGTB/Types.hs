@@ -19,6 +19,11 @@ import Data.Aeson.TH (deriveJSON, defaultOptions, Options (..))
 import Data.Char (toLower, toUpper)
 import Data.Monoid
 import Text.Read (readMaybe)
+import qualified Text.Megaparsec as P
+import qualified Text.Megaparsec.Char as P
+import Control.Applicative
+import Data.Maybe
+-- import qualified Control.Monad.Combinators as P
 
 newtype Latitude =
   -- In degrees
@@ -110,6 +115,69 @@ newtype NavID = NavID Text
 
 mkNavID :: String -> NavID
 mkNavID = NavID . Text.pack
+
+data WPSpec
+  = WPSpecID NavID -- ^ Look up waypoint by ID
+  | WPSpecLL LatLng -- ^ Make GPS waypoint based on lat/lon
+  | WPSpecNearby WPSpec WPSpec -- ^ Find waypoint nearest to other waypoint
+  deriving (Show)
+
+parseWPSpec :: String -> WPSpec
+parseWPSpec src =
+  fromMaybe (WPSpecID . NavID . Text.pack $ src) $
+    P.parseMaybe specP src
+  where
+    specP :: P.Parsec () String WPSpec
+    specP = do
+      lhs <- P.try llSpecP <|> idSpecP
+      rhsMay <- P.optional $ P.char '@' *> specP
+      case rhsMay of
+        Nothing -> return lhs
+        Just rhs -> return $ WPSpecNearby lhs rhs
+
+    llSpecP :: P.Parsec () String WPSpec
+    llSpecP = WPSpecLL <$> (LatLng <$> latP <* P.char ',' <*> lngP)
+
+    idSpecP :: P.Parsec () String WPSpec
+    idSpecP =
+      WPSpecID . NavID . Text.pack <$> P.many (P.noneOf (['@'] :: [Char]))
+
+    latP :: P.Parsec () String Latitude
+    latP = do
+      angle <- angleP
+      sign <- (P.char 'N' *> pure id)
+              <|> (P.char 'S' *> pure negate)
+      return $ Latitude (sign angle)
+
+    lngP :: P.Parsec () String Longitude
+    lngP = do
+      angle <- angleP
+      sign <- (P.char 'E' *> pure id)
+              <|> (P.char 'W' *> pure negate)
+      return $ Longitude (sign angle)
+
+    angleP :: P.Parsec () String Double
+    angleP = do
+      degrees <- intP
+      P.char '°'
+      minutes <- intP
+      P.char '\''
+      seconds <- doubleP
+      return $
+        seconds / 3600 +
+        fromIntegral minutes / 60 +
+        fromIntegral degrees
+
+    intP :: P.Parsec () String Int
+    intP = read <$> P.many P.digitChar
+
+    doubleP :: P.Parsec () String Double
+    doubleP = do
+      intpart <- P.many P.digitChar
+      P.char '.'
+      fracpart <- P.many P.digitChar
+      return . read $ intpart ++ "." ++ fracpart
+
 
 data Fix = Fix { fixID :: NavID, fixLoc :: LatLng }
   deriving (Read, Show, Eq)

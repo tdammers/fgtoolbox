@@ -38,6 +38,7 @@ executable fgtoolbox
                , ini
                , lens
                , megaparsec
+               , parser-combinators >=0.4 && <1
                , mtl
                , text
                , utf8-string

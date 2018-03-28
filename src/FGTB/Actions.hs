@@ -25,15 +25,16 @@ import Data.Text (Text)
 import qualified Data.Text as Text
 import System.IO
 import Debug.Trace
+import Data.Monoid
 
 -- * VOR-to-VOR Navigation
 
 data VornavRequest
-  = VornavRequest NavID NavID
+  = VornavRequest WPSpec WPSpec
 
 instance FromArgs VornavRequest where
   fromArgs = \case
-    [fromID, toID] -> return $ VornavRequest (mkNavID fromID) (mkNavID toID)
+    [fromID, toID] -> return $ VornavRequest (parseWPSpec fromID) (parseWPSpec toID)
     _ -> Left "Expected exactly two waypoints"
 
 data VornavResponse
@@ -56,12 +57,13 @@ instance Action VornavRequest VornavResponse where
         navs = fgdNavs fgd
         vors = filter isVor navs
         ndbs = filter isNdb navs
-        findWP wpID = case filter (\wp -> waypointID wp == wpID) waypoints of
-          x:_ -> return x
-          [] -> error $ "Waypoint not found: " ++ show wpID
 
-    wpFrom <- findWP fromID
-    wpTo <- findWP toID
+    wpFrom <-
+      maybe (error "Waypoint not found") return $
+      findWP fromID waypoints
+    wpTo <-
+      maybe (error "Waypoint not found") return $
+      findWP toID waypoints
     let positionFrom = waypointLoc wpFrom
         positionTo = waypointLoc wpTo
         routeMay = vorToVor (ndbs ++ vors) wpFrom wpTo
@@ -78,10 +80,10 @@ instance Action VornavRequest VornavResponse where
 -- * Printing routes
 
 data PrintRouteRequest
-  = PrintRouteRequest [NavID]
+  = PrintRouteRequest [WPSpec]
 
 instance FromArgs PrintRouteRequest where
-  fromArgs = return . PrintRouteRequest . map mkNavID
+  fromArgs = return . PrintRouteRequest . map parseWPSpec
 
 data Leg
   = Leg Distance Bearing Waypoint Waypoint
@@ -126,10 +128,10 @@ instance Action PrintRouteRequest PrintRouteResponse where
 -- * WP Info
 
 data WPInfoRequest
-  = WPInfoRequest [NavID]
+  = WPInfoRequest [WPSpec]
 
 instance FromArgs WPInfoRequest where
-  fromArgs = return . WPInfoRequest . map mkNavID
+  fromArgs = return . WPInfoRequest . map parseWPSpec
 
 data WPInfo
   = WPInfo
@@ -185,14 +187,17 @@ instance PrintableResult WPInfoResponse where
 
 instance Action WPInfoRequest WPInfoResponse where
   runAction fgd (WPInfoRequest ids) =
-    WPInfoResponse <$> mapM runWP (ids >>= flip findWaypoints (fgdWaypoints fgd))
+    WPInfoResponse <$>
+      mapM (\id -> runWP id $ findWP id (fgdWaypoints fgd)) ids
     where
       waypoints = fgdWaypoints fgd
       navs = fgdNavs fgd
       vors = filter (\nav -> isVor nav || isNdb nav) navs
 
-      runWP :: Waypoint -> IO WPInfo
-      runWP wp = do
+      runWP :: WPSpec -> Maybe Waypoint -> IO WPInfo
+      runWP spec Nothing = do
+        error $ "Waypoint not found: " <> show spec
+      runWP _ (Just wp) = do
         let nearbyVors = nearestNavs (waypointLoc wp) $ vorsInRange (waypointLoc wp) vors
             vorInfo vor =
               let (dist, bearing, _) = llDiff (navLoc vor) (waypointLoc wp)

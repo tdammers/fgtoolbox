@@ -153,16 +153,37 @@ findWaypointNear nid targetLoc waypoints =
       sortOn (llDist targetLoc . waypointLoc) $
       findWaypoints nid waypoints
 
-resolveRoute :: [NavID] -> [Waypoint] -> Either NavID [Waypoint]
+resolveRoute :: [WPSpec] -> [Waypoint] -> Either WPSpec [Waypoint]
 resolveRoute navs waypoints = go Nothing navs
   where
-    go :: Maybe Waypoint -> [NavID] -> Either NavID [Waypoint]
+    go :: Maybe Waypoint -> [WPSpec] -> Either WPSpec [Waypoint]
     go _ [] = Right []
     go current (x:xs) = do
       wp <- maybe (Left x) Right $ case current of
         Nothing ->
-          findWaypoint x waypoints
+          findWP x waypoints
         Just ref ->
-          findWaypointNear x (waypointLoc ref) waypoints
+          findWP (WPSpecNearby x (WPSpecLL . waypointLoc $ ref)) waypoints
       rest <- go (Just wp) xs
       return $ wp:rest
+
+findWPs :: WPSpec -> [Waypoint] -> [Waypoint]
+findWPs (WPSpecID wpid) wps = filter ((== wpid) . waypointID) wps
+findWPs (WPSpecLL ll) _ = [GpsWP ll]
+findWPs (WPSpecNearby spec refSpec) wps = do
+  refWP <- take 1 $ findWPs refSpec wps
+  let refLL = waypointLoc refWP
+  sortOn (llDist refLL . waypointLoc) (findWPs spec wps)
+
+findWP :: WPSpec -> [Waypoint] -> Maybe Waypoint
+findWP (WPSpecLL ll) _ = Just $ GpsWP ll
+findWP (WPSpecNearby spec refSpec) wps = do
+  refWP <- findWP refSpec wps
+  let refLL = waypointLoc refWP
+      candidates = sortOn (llDist refLL . waypointLoc) (findWPs spec wps)
+  case candidates of
+    [] -> Nothing
+    (x:_) -> Just x
+findWP spec wps = case findWPs spec wps of
+  [] -> Nothing
+  (x:_) -> Just x
