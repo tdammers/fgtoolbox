@@ -25,6 +25,8 @@ executable fgtoolbox
                , FGTB.Actions
                , FGTB.Action.Class
                , FGTB.CLI
+               , FGTB.API
+               , FGTB.Server
   default-language:    Haskell2010
   GHC-options: -rtsopts
   build-depends: base >=4.7 && < 5
@@ -40,6 +42,7 @@ executable fgtoolbox
                , megaparsec
                , parser-combinators >=0.4 && <1
                , mtl
+               , scotty
                , text
                , utf8-string
                , zlib

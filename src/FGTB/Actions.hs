@@ -11,6 +11,7 @@ import FGTB.Route
 import FGTB.FGData
 import FGTB.Action.Class
 import FGTB.CLI
+import FGTB.API
 
 import Control.Monad
 import qualified Data.ByteString.Lazy.Char8 as LBS8
@@ -26,6 +27,8 @@ import qualified Data.Text as Text
 import System.IO
 import Debug.Trace
 import Data.Monoid
+import Web.Scotty.Trans as Scotty
+import Data.Aeson (object, (.=), ToJSON (..))
 
 -- * VOR-to-VOR Navigation
 
@@ -37,8 +40,23 @@ instance FromArgs VornavRequest where
     [fromID, toID] -> return $ VornavRequest (parseWPSpec fromID) (parseWPSpec toID)
     _ -> Left "Expected exactly two waypoints"
 
+instance FromHttpRequest VornavRequest where
+  fromHttpRequest = do
+    fromID <- parseWPSpec <$> Scotty.param "from"
+    toID <- parseWPSpec <$> Scotty.param "to"
+    return $ VornavRequest fromID toID
+
 data VornavResponse
   = VornavResponse Waypoint Waypoint [Waypoint] Distance
+
+instance ToJSON VornavResponse where
+  toJSON (VornavResponse from to waypoints dist) =
+    object
+      [ "from" .= from
+      , "to" .= to
+      , "waypoints" .= waypoints
+      , "dist" .= dist
+      ]
 
 instance PrintableResult VornavResponse where
   printResult prn (VornavResponse wpFrom wpTo route dist) = do

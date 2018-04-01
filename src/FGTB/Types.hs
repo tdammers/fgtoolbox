@@ -300,6 +300,13 @@ data Waypoint
   | GpsWP LatLng
   deriving (Show, Eq)
 
+instance ToJSON Waypoint where
+  toJSON = \case
+    NavWP nav -> toJSON nav
+    FixWP fix -> toJSON fix
+    AirportWP ap -> toJSON ap
+    GpsWP ll -> toJSON ll
+
 waypointID :: Waypoint -> NavID
 waypointID (NavWP nav) = navID nav
 waypointID (FixWP fix) = fixID fix

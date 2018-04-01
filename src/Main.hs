@@ -9,6 +9,7 @@ import FGTB.FGData
 import FGTB.Action.Class
 import FGTB.Actions
 import FGTB.CLI
+import FGTB.Server
 
 import Control.Monad
 import qualified Data.ByteString.Lazy.Char8 as LBS8
@@ -40,21 +41,12 @@ main = do
   let cacheDir = home </> ".fgtoolbox"
       loadFGD = loadFGDataCached cacheDir fgroot
   case args of
+    "serve":_ -> do
+        fgdata <- loadFGD
+        runServer fgdata
     "vornav":rem -> do
         cliAction
           (Proxy :: Proxy VornavRequest)
-          loadFGD
-          rem
-    "printroute":rem -> do
-        fgdata <- loadFGDataCached cacheDir fgroot
-        cliAction
-          (Proxy :: Proxy PrintRouteRequest)
-          loadFGD
-          rem
-    "info":rem -> do
-        fgdata <- loadFGDataCached cacheDir fgroot
-        cliAction
-          (Proxy :: Proxy WPInfoRequest)
           loadFGD
           rem
     xs -> error $ "Invalid arguments"
