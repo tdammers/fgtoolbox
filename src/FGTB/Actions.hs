@@ -28,7 +28,7 @@ import System.IO
 import Debug.Trace
 import Data.Monoid
 import Web.Scotty.Trans as Scotty
-import Data.Aeson (object, (.=), ToJSON (..))
+import Data.Aeson (Value (Object), object, (.=), ToJSON (..))
 
 -- * VOR-to-VOR Navigation
 
@@ -103,13 +103,30 @@ data PrintRouteRequest
 instance FromArgs PrintRouteRequest where
   fromArgs = return . PrintRouteRequest . map parseWPSpec
 
+instance FromHttpRequest PrintRouteRequest where
+  fromHttpRequest = do
+    PrintRouteRequest . map parseWPSpec . words <$> param "waypoints"
+
 data Leg
   = Leg Distance Bearing Waypoint Waypoint
+
+instance ToJSON Leg where
+  toJSON (Leg dist bearing wpFrom wpTo) =
+    object
+      [ "dist" .= dist
+      , "bearing" .= bearing
+      , "from" .= wpFrom
+      , "to" .= wpTo
+      ]
 
 data PrintRouteResponse
   = PrintRouteResponse
       Waypoint
       [Leg]
+
+instance ToJSON PrintRouteResponse where
+  toJSON (PrintRouteResponse startWP legs) =
+    toJSON $ toJSON startWP : map toJSON legs
 
 instance PrintableResult PrintRouteResponse where
   printResult prn (PrintRouteResponse startWP legs) = do
@@ -151,11 +168,33 @@ data WPInfoRequest
 instance FromArgs WPInfoRequest where
   fromArgs = return . WPInfoRequest . map parseWPSpec
 
+instance FromHttpRequest WPInfoRequest where
+  fromHttpRequest = do
+    WPInfoRequest . map parseWPSpec . words <$> param "waypoints"
+
 data WPInfo
   = WPInfo
       Waypoint
       WPDetails
       [(Distance, Bearing, Bearing, Nav)]
+
+instance ToJSON WPInfo where
+  toJSON (WPInfo waypoint details navs) =
+    let Object base = toJSON details
+        Object ext = object
+          [ "id" .= waypointID waypoint
+          , "navs" .=
+              [ object
+                  [ "dist" .= dist
+                  , "bearing" .= bearing
+                  , "radial" .= radial
+                  , "nav" .= nav
+                  ]
+              | (dist, bearing, radial, nav)
+              <- navs
+              ]
+          ]
+    in Object (base <> ext)
 
 data RunwayInfo
   = RunwayInfo
@@ -171,10 +210,39 @@ data WPDetails
       NavFreq
       Distance
   | OtherWPInfo
+      Text
+
+instance ToJSON WPDetails where
+  toJSON = \case
+    AirportInfo name rwys ->
+      object
+        [ "name" .= name
+        , "runways" .=
+            [ object
+                [ "name" .= name
+                , "length" .= length
+                ]
+            | RunwayInfo name length <- rwys
+            ]
+        ]
+    NavInfo name freq dist ->
+      object
+        [ "name" .= name
+        , "freq" .= freq
+        , "dist" .= dist
+        ]
+    OtherWPInfo name ->
+      object
+        [ "name" .= name
+        ]
 
 data WPInfoResponse
   = WPInfoResponse
       [WPInfo]
+
+instance ToJSON WPInfoResponse where
+  toJSON (WPInfoResponse wpInfos) =
+    toJSON wpInfos
 
 instance PrintableResult WPInfoResponse where
   printResult prn (WPInfoResponse items) = do
@@ -244,7 +312,7 @@ instance Action WPInfoRequest WPInfoResponse where
                     (navFreq nav)
                     (navRange nav)
                 _ ->
-                  OtherWPInfo
+                  OtherWPInfo (waypointName wp)
             nearbyVorsInfo =
               map vorInfo nearbyVors
         return $ WPInfo wp details nearbyVorsInfo

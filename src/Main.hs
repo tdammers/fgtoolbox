@@ -42,11 +42,20 @@ main = do
       loadFGD = loadFGDataCached cacheDir fgroot
   case args of
     "serve":_ -> do
-        fgdata <- loadFGD
-        runServer fgdata
+        runServer loadFGD
     "vornav":rem -> do
         cliAction
           (Proxy :: Proxy VornavRequest)
+          loadFGD
+          rem
+    "info":rem -> do
+        cliAction
+          (Proxy :: Proxy WPInfoRequest)
+          loadFGD
+          rem
+    "printroute":rem -> do
+        cliAction
+          (Proxy :: Proxy PrintRouteRequest)
           loadFGD
           rem
     xs -> error $ "Invalid arguments"
