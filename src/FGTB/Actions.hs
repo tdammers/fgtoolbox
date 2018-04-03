@@ -29,6 +29,7 @@ import Debug.Trace
 import Data.Monoid
 import Web.Scotty.Trans as Scotty
 import Data.Aeson (Value (Object), object, (.=), ToJSON (..))
+import Control.Exception
 
 -- * VOR-to-VOR Navigation
 
@@ -77,15 +78,15 @@ instance Action VornavRequest VornavResponse where
         ndbs = filter isNdb navs
 
     wpFrom <-
-      maybe (error "Waypoint not found") return $
+      maybe (throw $ UserException "Waypoint not found") return $
       findWP fromID waypoints
     wpTo <-
-      maybe (error "Waypoint not found") return $
+      maybe (throw $ UserException "Waypoint not found") return $
       findWP toID waypoints
     let positionFrom = waypointLoc wpFrom
         positionTo = waypointLoc wpTo
         routeMay = vorToVor (ndbs ++ vors) wpFrom wpTo
-    (route, _) <- maybe (error "No route found") return routeMay
+    (route, _) <- maybe (throw $ UserException "No route found") return routeMay
     let dist = wpRouteLength positionFrom positionTo route
 
     return $
@@ -151,7 +152,7 @@ instance Action PrintRouteRequest PrintRouteResponse where
     let waypoints = fgdWaypoints fgd
     case resolveRoute ids waypoints of
       Left wpID -> do
-        error $ "Waypoint not found or ambiguous: " ++ show wpID
+        throw $ UserException $ "Waypoint not found or ambiguous: " ++ show wpID
       Right (wp:wps) -> do
         let startWP = wp
             legs = map (uncurry makeLeg) (zip (wp:wps) wps)
@@ -282,7 +283,7 @@ instance Action WPInfoRequest WPInfoResponse where
 
       runWP :: WPSpec -> Maybe Waypoint -> IO WPInfo
       runWP spec Nothing = do
-        error $ "Waypoint not found: " <> show spec
+        throw $ UserException $ "Waypoint not found: " <> show spec
       runWP _ (Just wp) = do
         let nearbyVors = nearestNavs (waypointLoc wp) $ vorsInRange (waypointLoc wp) vors
             vorInfo vor =

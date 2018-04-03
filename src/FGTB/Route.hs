@@ -112,7 +112,7 @@ vorToVor navs from to =
   where
     costFactor b =
         case b of
-          NavWP (Nav { navTy = NDB }) -> 1.1
+          NavWP (Nav { navTy = NDB }) -> 1.3
           _ -> 1
     estimate a b =
       llDist (waypointLoc a) (waypointLoc b) * costFactor a
@@ -120,7 +120,9 @@ vorToVor navs from to =
       let range = case a of
             NavWP nav -> navRange nav
             _ -> 0
-      in [ (NavWP vor, llDist (waypointLoc a) (navLoc vor) * costFactor (NavWP vor))
+      in -- Prefer navs in range
+         [ let d = llDist (waypointLoc a) (navLoc vor)
+           in (NavWP vor, d * costFactor (NavWP vor))
          | vor <- vorsInRange' range (waypointLoc a) navs
          ]
     goalCond wp =

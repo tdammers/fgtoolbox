@@ -19,14 +19,22 @@ var create = function() {
         resultbox.fadeOut()
 
         var success = function(data) {
-            resultbox.empty()
-            resultbox.append($(templates.vornav.result(data)).children())
-            resultbox.fadeIn()
+            if (data.error) {
+                return failure(data)
+            }
+            try {
+                resultbox.empty()
+                resultbox.append($(templates.vornav.result(data)).children())
+                resultbox.fadeIn()
+            }
+            catch (e) {
+                return failure(data)
+            }
         }
 
         var failure = function(data) {
             resultbox.empty()
-            resultbox.text(data.responseText)
+            resultbox.text(data.message || data.responseText || "Something went wrong")
             resultbox.fadeIn()
         }
 
