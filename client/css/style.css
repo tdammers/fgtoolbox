@@ -22,7 +22,7 @@ form {
 }
 
 .spinnerOverlay {
-    position: absolute;
+    position: fixed;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -36,7 +36,7 @@ form {
 
 .spinnerContainer {
     text-align: center;
-    background-color: white;
+    background-color: #8CF;
     border: solid 1px black;
     padding: 1rem 2rem;
     border-radius: 0.5rem;
@@ -44,6 +44,7 @@ form {
 }
 
 .spinnerOverlay .spinner {
+    color: #EFF;
     animation-duration: 3s;
     animation-name: spin;
     animation-iteration-count: infinite;
