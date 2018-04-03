@@ -369,7 +369,7 @@ function isArray (arr) {
 
 
 
-},{"browser-split":1,"class-list":2,"html-element":326}],4:[function(require,module,exports){
+},{"browser-split":1,"class-list":2,"html-element":330}],4:[function(require,module,exports){
 
 var indexOf = [].indexOf;
 
@@ -22307,60 +22307,19 @@ var zipWith = /*#__PURE__*/_curry3(function zipWith(fn, a, b) {
 });
 module.exports = zipWith;
 },{"./internal/_curry3":112}],325:[function(require,module,exports){
-console.log('hi')
 var $ = require('jquery')
 var R = require('ramda')
 var h = require('hyperscript')
-
-var formatFreq = function(freq) {
-    if (R.isNil(freq)) return null;
-    if (freq >= 1000) {
-        return (freq / 100).toFixed(2) + 'MHz'
-    }
-    else {
-        return freq.toFixed(1) + 'kHz'
-    }
-}
-
-var tplVornavResult = function(data) {
-    return h('div',
-          h('h3',
-            'From ',
-            data.from.id,
-            h('small', ' (', data.from.name, ')'),
-            ' to ',
-            data.to.id,
-            h('small', ' (', data.to.name, ')')),
-          h('h4', data.dist.toFixed(1), ' nm'),
-          h('pre',
-            R.intersperse(' ')(R.pluck('id')(data.waypoints))),
-          R.map(function(waypoint){
-            var waypointDetails =
-                    R.reject(R.isNil)(
-                        [ formatFreq(waypoint.freq)
-                        ])
-            return h('div',
-                h('strong', waypoint.id),
-                ' (', waypoint.name, ') ',
-                waypointDetails)
-                
-          }, data.waypoints))
-}
-
-var tplSpinner = function() {
-    return h('div',
-          h('div.spinnerOverlay',
-            h('div.spinnerContainer',
-              h('div.spinner',
-                h('span', '\u2708')),
-              h('div', 'Please wait...'))))
-}
+var templates = require('./templates')
 
 var prepareVornavForm = function() {
-    var spinnerOverlay = $(tplSpinner()).children()
+    var spinnerOverlay = $(templates.spinner.spinner())
     $('body').append(spinnerOverlay.hide())
 
-    $('form[data-submit-proc]').on('submit', function(e) {
+    var vornavForm = $(templates.vornav.form({}))
+    $('body').append(vornavForm)
+
+    vornavForm.on('submit', function(e) {
         var form = $(this)
         var from = $('[name=from]', this).val()
         var to = $('[name=to]', this).val()
@@ -22370,7 +22329,7 @@ var prepareVornavForm = function() {
 
         var success = function(data) {
             resultbox.empty()
-            resultbox.append($(tplVornavResult(data)).children())
+            resultbox.append($(templates.vornav.result(data)).children())
             resultbox.fadeIn()
         }
 
@@ -22395,6 +22354,90 @@ var prepareVornavForm = function() {
 
 $(document).ready(prepareVornavForm)
 
-},{"hyperscript":3,"jquery":5,"ramda":90}],326:[function(require,module,exports){
+},{"./templates":326,"hyperscript":3,"jquery":5,"ramda":90}],326:[function(require,module,exports){
+module.exports = {
+        spinner: require('./templates/spinner'),
+        vornav: require('./templates/vornav')
+    }
+
+
+},{"./templates/spinner":328,"./templates/vornav":329}],327:[function(require,module,exports){
+var R = require('ramda')
+
+var formatFreq = function(freq) {
+    if (R.isNil(freq)) return null;
+    if (freq >= 1000) {
+        return (freq / 100).toFixed(2) + 'MHz'
+    }
+    else {
+        return freq.toFixed(1) + 'kHz'
+    }
+}
+
+module.exports = {
+    formatFreq: formatFreq
+}
+
+},{"ramda":90}],328:[function(require,module,exports){
+var R = require('ramda')
+var h = require('hyperscript')
+var common = require('./common')
+
+module.exports = {
+    spinner: function() {
+      return h('div.spinnerOverlay',
+        h('div.spinnerContainer',
+          h('div.spinner',
+            h('span', '\u2708')),
+          h('div', 'Please wait...')))
+    }
+}
+
+},{"./common":327,"hyperscript":3,"ramda":90}],329:[function(require,module,exports){
+var R = require('ramda')
+var h = require('hyperscript')
+var common = require('./common')
+
+module.exports = {
+    form: function(data) {
+        return h('form.vornav-form',
+            h('h3', 'VOR-to-VOR'),
+            h('div.form-row',
+                h('label', {'for': 'from'}, 'from'),
+                h('input', {'type': 'text', 'name': 'from'})),
+            h('div.form-row',
+                h('label', {'for': 'to'}, 'to'),
+                h('input', {'type': 'text', 'name': 'to'})),
+            h('div.form-buttons',
+                h('button', {'type': 'submit'}, 'Update')),
+            h('div.result'))
+    },
+    result: function(data) {
+        return h('div',
+              h('h3',
+                'From ',
+                data.from.id,
+                h('small', ' (', data.from.name, ')'),
+                ' to ',
+                data.to.id,
+                h('small', ' (', data.to.name, ')')),
+              h('h4', data.dist.toFixed(1), ' nm'),
+              h('pre',
+                R.intersperse(' ')(R.pluck('id')(data.waypoints))),
+              R.map(function(waypoint){
+                var waypointDetails =
+                        R.reject(R.isNil)(
+                            [ common.formatFreq(waypoint.freq)
+                            ])
+                return h('div',
+                    h('strong', waypoint.id),
+                    ' (', waypoint.name, ') ',
+                    waypointDetails)
+                    
+              }, data.waypoints))
+    }
+}
+
+},{"./common":327,"hyperscript":3,"ramda":90}],330:[function(require,module,exports){
 
 },{}]},{},[325]);

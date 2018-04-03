@@ -1,57 +1,16 @@
-console.log('hi')
 var $ = require('jquery')
 var R = require('ramda')
 var h = require('hyperscript')
-
-var formatFreq = function(freq) {
-    if (R.isNil(freq)) return null;
-    if (freq >= 1000) {
-        return (freq / 100).toFixed(2) + 'MHz'
-    }
-    else {
-        return freq.toFixed(1) + 'kHz'
-    }
-}
-
-var tplVornavResult = function(data) {
-    return h('div',
-          h('h3',
-            'From ',
-            data.from.id,
-            h('small', ' (', data.from.name, ')'),
-            ' to ',
-            data.to.id,
-            h('small', ' (', data.to.name, ')')),
-          h('h4', data.dist.toFixed(1), ' nm'),
-          h('pre',
-            R.intersperse(' ')(R.pluck('id')(data.waypoints))),
-          R.map(function(waypoint){
-            var waypointDetails =
-                    R.reject(R.isNil)(
-                        [ formatFreq(waypoint.freq)
-                        ])
-            return h('div',
-                h('strong', waypoint.id),
-                ' (', waypoint.name, ') ',
-                waypointDetails)
-                
-          }, data.waypoints))
-}
-
-var tplSpinner = function() {
-    return h('div',
-          h('div.spinnerOverlay',
-            h('div.spinnerContainer',
-              h('div.spinner',
-                h('span', '\u2708')),
-              h('div', 'Please wait...'))))
-}
+var templates = require('./templates')
 
 var prepareVornavForm = function() {
-    var spinnerOverlay = $(tplSpinner()).children()
+    var spinnerOverlay = $(templates.spinner.spinner())
     $('body').append(spinnerOverlay.hide())
 
-    $('form[data-submit-proc]').on('submit', function(e) {
+    var vornavForm = $(templates.vornav.form({}))
+    $('body').append(vornavForm)
+
+    vornavForm.on('submit', function(e) {
         var form = $(this)
         var from = $('[name=from]', this).val()
         var to = $('[name=to]', this).val()
@@ -61,7 +20,7 @@ var prepareVornavForm = function() {
 
         var success = function(data) {
             resultbox.empty()
-            resultbox.append($(tplVornavResult(data)).children())
+            resultbox.append($(templates.vornav.result(data)).children())
             resultbox.fadeIn()
         }
 
