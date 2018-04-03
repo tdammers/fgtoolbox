@@ -13,5 +13,11 @@ function watch_serve() {
     done
 }
 
+function watch_js() {
+    cd client
+    watchify src/main.js -o js/main.js
+}
+
+watch_js &
 watch_serve &
 watch_compile

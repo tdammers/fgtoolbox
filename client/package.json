@@ -1,0 +1,17 @@
+{
+  "name": "fgtoolbox-client",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "hyperscript": "^2.0.2",
+    "jquery": "^3.3.1",
+    "ramda": "^0.25.0",
+    "zepto": "^1.2.0"
+  }
+}

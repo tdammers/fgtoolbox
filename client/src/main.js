@@ -1,3 +1,7 @@
+console.log('hi')
+var $ = require('jquery')
+var R = require('ramda')
+
 var expandTemplate = function(template, context) {
     var target = $(template).clone(true, true)
     $('[data-tpl-value]', target).each(function() {
