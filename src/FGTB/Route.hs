@@ -1,4 +1,5 @@
 {-#LANGUAGE OverloadedLists #-}
+{-#LANGUAGE OverloadedStrings #-}
 module FGTB.Route
 where
 
@@ -12,8 +13,10 @@ import qualified Numeric.Units.Dimensional as D
 import qualified Numeric.Units.Dimensional.SIUnits as D
 import qualified Numeric.Units.Dimensional.NonSI as D
 import qualified Geodetics.Geodetic as Geo
+import qualified Data.Text as Text
 import Data.Maybe
 import Text.Printf
+import Data.Monoid
 
 toCoord :: LatLng -> Geo.Geodetic Geo.WGS84
 toCoord (LatLng (Latitude latDeg) (Longitude lngDeg)) =
@@ -79,7 +82,7 @@ isVorInRange' :: Distance -> LatLng -> Nav -> Bool
 isVorInRange' addDist pos nav =
   let dist = llDist pos (navLoc nav)
       range = navRange nav + addDist
-  in dist <= range * 0.5
+  in dist <= range * 0.75
 
 nearestNavs :: LatLng -> [Nav] -> [Nav]
 nearestNavs pos navs =
@@ -104,6 +107,7 @@ navRouteLength from to via =
 vorToVor :: [Nav] -> Waypoint -> Waypoint -> Maybe ([Waypoint], Distance)
 vorToVor navs from to =
   aStar
+    (\wp -> Text.unpack $ (unNavID (waypointID wp) <> " (" <> waypointName wp <> ")"))
     estimate
     edges
     goalCond

@@ -34,7 +34,6 @@ runServer loadFGD = do
               ".js" -> "text/javascript;charset=utf8"
               ".css" -> "text/css;charset=utf8"
               _ -> "application/binary"
-        liftIO $ print (dirname </> filename)
         setHeader "Content-Type" contentType
         file $ "client" </> dirname </> filename
       get "/api/vornav/:from/:to" $

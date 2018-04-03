@@ -116,6 +116,9 @@ newtype NavID = NavID Text
 mkNavID :: String -> NavID
 mkNavID = NavID . Text.pack
 
+unNavID :: NavID -> Text
+unNavID (NavID nid) = nid
+
 data WPSpec
   = WPSpecID NavID -- ^ Look up waypoint by ID
   | WPSpecLL LatLng -- ^ Make GPS waypoint based on lat/lon
@@ -306,6 +309,12 @@ instance ToJSON Waypoint where
     FixWP fix -> toJSON fix
     AirportWP ap -> toJSON ap
     GpsWP ll -> toJSON ll
+
+instance Ord Waypoint where
+  compare a b =
+    case compare (waypointID a) (waypointID b) of
+      EQ -> compare (waypointName a) (waypointName b)
+      x -> x
 
 waypointID :: Waypoint -> NavID
 waypointID (NavWP nav) = navID nav
