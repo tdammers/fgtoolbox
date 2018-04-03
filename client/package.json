@@ -11,7 +11,6 @@
   "dependencies": {
     "hyperscript": "^2.0.2",
     "jquery": "^3.3.1",
-    "ramda": "^0.25.0",
-    "zepto": "^1.2.0"
+    "ramda": "^0.25.0"
   }
 }
