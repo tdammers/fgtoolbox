@@ -37,6 +37,7 @@ executable fgtoolbox
                , containers
                , dimensional
                , filepath
+               , file-embed
                , ini
                , lens
                , megaparsec

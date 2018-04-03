@@ -1,0 +1,64 @@
+html {
+    font-family: sans-serif;
+    line-height: 1.5;
+}
+
+.form-row>label {
+    display: block;
+}
+
+.templates {
+    display: none;
+}
+
+form {
+    position: relative;
+    overflow: hidden;
+}
+
+.result {
+    height: 20rem;
+    overflow: auto;
+}
+
+.spinnerOverlay {
+    position: absolute;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(255,255,255,0.5);
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 1;
+}
+
+.spinnerContainer {
+    text-align: center;
+    background-color: white;
+    border: solid 1px black;
+    padding: 1rem 2rem;
+    border-radius: 0.5rem;
+}
+
+.spinnerOverlay .spinner {
+    animation-duration: 3s;
+    animation-name: spin;
+    animation-iteration-count: infinite;
+    animation-timing-function: linear;
+    animation-direction: normal;
+    font-size: 400%;
+    text-align: center;
+    vertical-align: middle;
+}
+
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}

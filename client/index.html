@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link rel="stylesheet" type="text/css" href="/static/style.css">
+    </head>
+    <body>
+        <h1>FGToolbox</h1>
+
+        <form id="vornav-form" data-submit-proc="vornav">
+            <h3>VOR-to-VOR navigation</h3>
+            <div class="form-row">
+                <label for="from">From</label>
+                <input type="text" name="from">
+            </div>
+            <div class="form-row">
+                <label for="to">To</label>
+                <input type="text" name="to">
+            </div>
+            <div class="form-buttons">
+                <button type="submit">Update</button>
+            </div>
+            <div class="result">
+            </div>
+        </form>
+
+        <div class="templates">
+            <div id="tplVornavResult">
+                <h3>
+                    From
+                    <strong data-tpl-value="from-id"></strong>
+                    (<small data-tpl-value="from-name"></small>)
+                    to
+                    <strong data-tpl-value="to-id"></strong>
+                    (<small data-tpl-value="to-name"></small>)
+                </h3>
+            </div>
+            <div id="tplSpinner">
+                <div class="spinnerOverlay">
+                    <div class="spinnerContainer">
+                        <div class="spinner">
+                            <span>&#x2708;</span>
+                        </div>
+                        <div>please wait...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script type="text/javascript" src="/static/zepto.js"></script>
+        <script type="text/javascript" src="/static/ramda.js"></script>
+        <script type="text/javascript" src="/static/main.js"></script>
+    </body>
+</html>
