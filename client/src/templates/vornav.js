@@ -13,7 +13,7 @@ module.exports = {
                 h('label', {'for': 'to'}, 'to'),
                 h('input', {'type': 'text', 'name': 'to'})),
             h('div.form-buttons',
-                h('button', {'type': 'submit'}, 'Update')),
+                h('button', {'type': 'submit'}, 'Route')),
             h('div.result'))
     },
     result: function(data) {

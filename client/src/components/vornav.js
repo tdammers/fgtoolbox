@@ -4,7 +4,16 @@ var $ = require('jquery')
 
 var create = function() {
     var container = $('<div>')
-    var spinnerOverlay = $(templates.spinner.spinner())
+    var cancelHandler = null
+    var spinnerOverlay =
+            $(templates.spinner.spinner({
+                    onCancel: function() {
+                        console.log('cancelHandler:', cancelHandler)
+                        if (!R.isNil(cancelHandler)) {
+                            cancelHandler()
+                        }
+                    }
+                }))
     $(container).append(spinnerOverlay.hide())
 
     var vornavForm = $(templates.vornav.form({}))
@@ -33,12 +42,17 @@ var create = function() {
         }
 
         var failure = function(data) {
+            console.log(data)
             resultbox.empty()
-            resultbox.text(data.message || data.responseText || "Something went wrong")
+            resultbox.text(
+                data.message ||
+                data.responseText ||
+                data.statusText ||
+                "Something went wrong")
             resultbox.fadeIn()
         }
 
-        $.get(
+        var rq = $.get(
             '/api/vornav/' +
             encodeURIComponent(from) +
             '/' +
@@ -46,6 +60,11 @@ var create = function() {
             .done(success)
             .fail(failure)
             .always(function(){ spinnerOverlay.fadeOut() })
+
+        cancelHandler = function(){
+            rq.abort()
+            cancelHandler = null
+        }
         e.preventDefault()
         return false
     })
