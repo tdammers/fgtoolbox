@@ -13,7 +13,7 @@ import Text.Printf
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.List
-import Data.Aeson (FromJSON (..), ToJSON (..), (.:))
+import Data.Aeson (FromJSON (..), ToJSON (..), (.:), (.=), object)
 import qualified Data.Aeson as JSON
 import Data.Aeson.TH (deriveJSON, defaultOptions, Options (..))
 import Data.Char (toLower, toUpper)
@@ -23,11 +23,12 @@ import qualified Text.Megaparsec as P
 import qualified Text.Megaparsec.Char as P
 import Control.Applicative
 import Data.Maybe
+import Debug.Trace
 -- import qualified Control.Monad.Combinators as P
 
 newtype Latitude =
   -- In degrees
-  Latitude Double
+  Latitude { unLatitude :: Double }
   deriving (Read, Show, Eq, Ord, Num, Fractional, FromJSON, ToJSON)
 
 mkLat :: Int -> Double -> Latitude
@@ -35,7 +36,7 @@ mkLat deg min = Latitude $ fromIntegral deg + min / 60
 
 newtype Longitude =
   -- In degrees
-  Longitude Double
+  Longitude { unLongitude :: Double }
   deriving (Read, Show, Eq, Ord, Num, Fractional, FromJSON, ToJSON)
 
 mkLng :: Int -> Double -> Longitude
@@ -119,20 +120,31 @@ mkNavID = NavID . Text.pack
 unNavID :: NavID -> Text
 unNavID (NavID nid) = nid
 
+data NavOffsetSpec
+  = NavOffsetSpec
+      { offsetSpecRadialBase :: NavID
+      , offsetSpecRadial :: Bearing
+      , offsetSpecDistBase :: NavID
+      , offsetSpecDist :: Distance
+      }
+      deriving (Show)
+
 data WPSpec
   = WPSpecID NavID -- ^ Look up waypoint by ID
+  | WPSpecOfs NavOffsetSpec
   | WPSpecLL LatLng -- ^ Make GPS waypoint based on lat/lon
   | WPSpecNearby WPSpec WPSpec -- ^ Find waypoint nearest to other waypoint
   deriving (Show)
 
 parseWPSpec :: String -> WPSpec
 parseWPSpec src =
+  trace ("src: " ++ src) $
   fromMaybe (WPSpecID . NavID . Text.pack $ src) $
     P.parseMaybe specP src
   where
     specP :: P.Parsec () String WPSpec
     specP = do
-      lhs <- P.try llSpecP <|> idSpecP
+      lhs <- P.try llSpecP <|> P.try offsetSpecP <|> idSpecP
       rhsMay <- P.optional $ P.char '@' *> specP
       case rhsMay of
         Nothing -> return lhs
@@ -143,7 +155,26 @@ parseWPSpec src =
 
     idSpecP :: P.Parsec () String WPSpec
     idSpecP =
-      WPSpecID . NavID . Text.pack <$> P.many (P.noneOf (['@'] :: [Char]))
+      WPSpecID <$> navIDP
+
+    navIDP :: P.Parsec () String NavID
+    navIDP =
+      NavID . Text.pack <$> P.many (P.oneOf (['A'..'Z'] :: [Char]))
+
+    offsetSpecP :: P.Parsec () String WPSpec
+    offsetSpecP = do
+      dist <- Distance <$> doubleP
+      traceM $ "dist: " ++ show dist
+      distNav <- navIDP
+      traceM $ "distNav: " ++ show distNav
+      radialNav <- fmap (fromMaybe distNav) . P.optional $ do
+        P.char ','
+        navIDP
+      traceM $ "radialNav: " ++ show radialNav
+      radial <- Bearing <$> doubleP
+      traceM $ "radial: " ++ show radial
+      return . WPSpecOfs $ NavOffsetSpec radialNav radial distNav dist
+      
 
     latP :: P.Parsec () String Latitude
     latP = do
@@ -172,15 +203,19 @@ parseWPSpec src =
         fromIntegral degrees
 
     intP :: P.Parsec () String Int
-    intP = read <$> P.many P.digitChar
+    intP = readTraced <$> P.many P.digitChar
 
     doubleP :: P.Parsec () String Double
     doubleP = do
-      intpart <- P.many P.digitChar
-      P.char '.'
-      fracpart <- P.many P.digitChar
-      return . read $ intpart ++ "." ++ fracpart
+      intpart <- P.some P.digitChar
+      fracpart <- fmap (fromMaybe "0") . P.optional $ do
+        P.char '.'
+        P.many P.digitChar
+      return . readTraced $ intpart ++ "." ++ fracpart
 
+readTraced :: Read a => String -> a
+readTraced str =
+  trace str $ read str
 
 data Fix = Fix { fixID :: NavID, fixLoc :: LatLng }
   deriving (Read, Show, Eq)
@@ -296,46 +331,3 @@ airportLoc ap = avgLatLng $
   | rwy <- airportRunways ap
   ]
 
-data Waypoint
-  = NavWP Nav
-  | FixWP Fix
-  | AirportWP Airport
-  | GpsWP LatLng
-  deriving (Show, Eq)
-
-instance ToJSON Waypoint where
-  toJSON = \case
-    NavWP nav -> toJSON nav
-    FixWP fix -> toJSON fix
-    AirportWP ap -> toJSON ap
-    GpsWP ll -> toJSON ll
-
-instance Ord Waypoint where
-  compare a b =
-    case compare (waypointID a) (waypointID b) of
-      EQ -> compare (waypointName a) (waypointName b)
-      x -> x
-
-waypointID :: Waypoint -> NavID
-waypointID (NavWP nav) = navID nav
-waypointID (FixWP fix) = fixID fix
-waypointID (GpsWP ll) = mkNavID $ "GPS" ++ show ll
-waypointID (AirportWP ap) = airportID ap
-
-waypointLoc :: Waypoint -> LatLng
-waypointLoc (NavWP nav) = navLoc nav
-waypointLoc (FixWP fix) = fixLoc fix
-waypointLoc (GpsWP ll) = ll
-waypointLoc (AirportWP ap) = airportLoc ap
-
-waypointTyN :: Waypoint -> Text
-waypointTyN (NavWP nav) = Text.pack . show . navTy $ nav
-waypointTyN (FixWP _) = "FIX"
-waypointTyN (GpsWP _) = "GPS"
-waypointTyN (AirportWP _) = "AIRPORT"
-
-waypointName :: Waypoint -> Text
-waypointName (NavWP nav) = navName nav
-waypointName (AirportWP ap) = airportName ap
-waypointName (FixWP _) = "fix"
-waypointName (GpsWP ll) = Text.pack . prettyLatLng $ ll

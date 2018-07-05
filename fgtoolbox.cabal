@@ -17,7 +17,9 @@ executable fgtoolbox
   hs-source-dirs:      src
   main-is:             Main.hs
   other-modules: FGTB.Types
+               , FGTB.Waypoint
                , FGTB.Parse
+               , FGTB.Geo
                , FGTB.Map
                , FGTB.Route
                , FGTB.AStar

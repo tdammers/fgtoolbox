@@ -1,10 +1,13 @@
 {-#LANGUAGE OverloadedStrings #-}
 {-#LANGUAGE LambdaCase #-}
 {-#LANGUAGE MultiParamTypeClasses #-}
+{-#LANGUAGE PartialTypeSignatures #-}
 module FGTB.Actions
 where
 
 import FGTB.Types
+import FGTB.Waypoint
+import FGTB.Geo
 import FGTB.Parse
 import FGTB.Map
 import FGTB.Route
@@ -30,6 +33,7 @@ import Data.Monoid
 import Web.Scotty.Trans as Scotty
 import Data.Aeson (Value (Object), object, (.=), ToJSON (..))
 import Control.Exception
+import Data.Char (toLower)
 
 -- * VOR-to-VOR Navigation
 
@@ -161,6 +165,68 @@ instance Action PrintRouteRequest PrintRouteResponse where
               in Leg dist bearing a b
         return $ PrintRouteResponse startWP legs
 
+-- * WP XML Procedures
+--
+data XmlProcType
+  = XmlSID
+  | XmlSTAR
+  deriving (Show, Eq)
+
+data WPXmlProcRequest
+  = WPXmlProcRequest XmlProcType [WPSpec]
+
+instance FromArgs WPXmlProcRequest where
+  fromArgs = \case
+    [] -> return $ WPXmlProcRequest XmlSID []
+    "sid":xs -> return . WPXmlProcRequest XmlSID $ map parseWPSpec xs
+    "star":xs -> return . WPXmlProcRequest XmlSTAR $ map parseWPSpec xs
+    x:xs -> fail "Please specify 'sid' or 'star'"
+
+instance FromHttpRequest WPXmlProcRequest where
+  fromHttpRequest = do
+    tyStr <- param "type"
+    ty <- case tyStr of
+      "sid" -> return XmlSID
+      "star" -> return XmlSTAR
+      x -> fail $ "invalid type: " ++ x
+    wps <- map parseWPSpec . words <$> param "waypoints"
+    return $ WPXmlProcRequest ty wps
+
+data WPXmlProcResponse
+  = WPXmlProcResponse
+      XmlProcType
+      [WPInfo]
+
+instance ToJSON WPXmlProcResponse where
+  toJSON (WPXmlProcResponse ty wps) =
+    object
+      [ "type" .= (map toLower . drop 3 . show $ ty)
+      , "waypoints" .= wps
+      ]
+
+xmlProcTypeName :: XmlProcType -> String
+xmlProcTypeName XmlSID = "Sid"
+xmlProcTypeName XmlSTAR = "Star"
+
+instance PrintableResult WPXmlProcResponse where
+  printResult prn (WPXmlProcResponse ty items) = do
+    let listElemName = xmlProcTypeName ty ++ "_Waypoint"
+    let tag :: String -> String -> _ ()
+        tag elemName content =
+          prn $ printf "    <%s>%s</%s>\n" elemName content elemName
+    forM_ (zip ([1..] :: [Int]) items) $ \(id, WPInfo wp details _) -> do
+      prn $ printf "<%s ID=\"%i\">\n" listElemName id
+      tag "Name" (Text.unpack . unNavID $ waypointID wp)
+      tag "Type" "Normal"
+      tag "Latitude" (show . unLatitude . lat $ waypointLoc wp)
+      tag "Longitude" (show . unLongitude . lng $ waypointLoc wp)
+      tag "Speed" "0"
+      tag "Altitude" "0"
+      tag "AltitudeCons" "0"
+      tag "Flytype" "Fly-By"
+      tag "Sp_Turn" "Auto"
+      prn $ printf "</%s>\n" listElemName
+
 -- * WP Info
 
 data WPInfoRequest
@@ -271,6 +337,11 @@ instance PrintableResult WPInfoResponse where
       forM_ vors $ \(dist, radial, bearing, nav)  -> do
         prn $ printf "    - %5.1f nm %s %05.1f (%05.1f°T) [%6s]\n"
           dist (navID nav) radial bearing (show $ navFreq nav)
+
+instance Action WPXmlProcRequest WPXmlProcResponse where
+  runAction fgd (WPXmlProcRequest ty ids) = do
+    WPInfoResponse rdata <- runAction fgd (WPInfoRequest ids)
+    return $ WPXmlProcResponse ty rdata
 
 instance Action WPInfoRequest WPInfoResponse where
   runAction fgd (WPInfoRequest ids) =

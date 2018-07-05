@@ -4,6 +4,7 @@ module FGTB.FGData
 where
 
 import FGTB.Types
+import FGTB.Waypoint
 import FGTB.Parse
 import qualified Data.ByteString.Lazy.Char8 as LBS8
 import System.FilePath

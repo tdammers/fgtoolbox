@@ -4,6 +4,8 @@ module FGTB.Route
 where
 
 import FGTB.Types
+import FGTB.Waypoint
+import FGTB.Geo
 import Data.List
 import qualified Data.Set as Set
 import Data.Set (Set)
@@ -13,61 +15,11 @@ import qualified Numeric.Units.Dimensional as D
 import qualified Numeric.Units.Dimensional.SIUnits as D
 import qualified Numeric.Units.Dimensional.NonSI as D
 import qualified Geodetics.Geodetic as Geo
+import qualified Geodetics.Path as Geo
 import qualified Data.Text as Text
 import Data.Maybe
 import Text.Printf
 import Data.Monoid
-
-toCoord :: LatLng -> Geo.Geodetic Geo.WGS84
-toCoord (LatLng (Latitude latDeg) (Longitude lngDeg)) =
-  Geo.Geodetic
-    (latDeg D.*~ D.degree)
-    (lngDeg D.*~ D.degree)
-    (0 D.*~ D.meter)
-    Geo.WGS84
-
-llDiff :: LatLng -> LatLng -> (Distance, Bearing, Bearing)
-llDiff from to
-  | from == to =
-    (Distance 0, Bearing 0, Bearing 180)
-  | otherwise =
-    fromMaybe (mToNm (1/0), Bearing 0, Bearing 180) $ do
-      (distRaw, aziRaw, revAziRaw) <- Geo.groundDistance (toCoord from) (toCoord to)
-      let dist = Distance $ distRaw D./~ D.nauticalMile
-          bearingFrom = Bearing $ aziRaw D./~ D.degree
-          bearingTo = Bearing $ revAziRaw D./~ D.degree
-      return (dist, bearingFrom, bearingTo)
-
-llDist :: LatLng -> LatLng -> Distance
-llDist from to =
-  dist
-  where
-    (dist, _, _) = llDiff from to
-
-llBearingFrom :: LatLng -> LatLng -> Bearing
-llBearingFrom from to =
-  bearing
-  where
-    (_, bearing, _) = llDiff from to
-
-llBearingTo :: LatLng -> LatLng -> Bearing
-llBearingTo from to =
-  bearing
-  where
-    (_, _, bearing) = llDiff from to
-
-metersPerNm = 1852
-metersPerFoot = 0.3048
-
-mToNm :: Double -> Distance
-mToNm m = Distance (m / metersPerNm)
-
-mToFeet :: Double -> Altitude
-mToFeet m = Altitude (m / metersPerFoot)
-
-nmToFeet :: Distance -> Altitude
-nmToFeet (Distance nm) =
-  mToFeet $ nm * metersPerNm
 
 vorsInRange :: LatLng -> [Nav] -> [Nav]
 vorsInRange pos = filter (isVorInRange pos)
@@ -176,6 +128,10 @@ resolveRoute navs waypoints = go Nothing navs
 findWPs :: WPSpec -> [Waypoint] -> [Waypoint]
 findWPs (WPSpecID wpid) wps = filter ((== wpid) . waypointID) wps
 findWPs (WPSpecLL ll) _ = [GpsWP ll]
+findWPs (WPSpecOfs ofs) wps = do
+  radialBase <- findWPs (WPSpecID $ offsetSpecRadialBase ofs) wps
+  distBase <- findWPs (WPSpecNearby (WPSpecID $ offsetSpecDistBase ofs) (WPSpecID $ offsetSpecRadialBase ofs)) wps
+  return . OffsetWP $ NavOffset radialBase (offsetSpecRadial ofs) distBase (offsetSpecDist ofs)
 findWPs (WPSpecNearby spec refSpec) wps = do
   refWP <- take 1 $ findWPs refSpec wps
   let refLL = waypointLoc refWP

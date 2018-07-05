@@ -53,6 +53,11 @@ main = do
           (Proxy :: Proxy WPInfoRequest)
           loadFGD
           rem
+    "xmlproc":rem -> do
+        cliAction
+          (Proxy :: Proxy WPXmlProcRequest)
+          loadFGD
+          rem
     "printroute":rem -> do
         cliAction
           (Proxy :: Proxy PrintRouteRequest)
