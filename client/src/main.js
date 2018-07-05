@@ -1,7 +1,8 @@
 var $ = require('jquery')
 var R = require('ramda')
 var h = require('hyperscript')
-var components = {
+components = {
+        base: require('./components/base'),
         vornav: require('./components/vornav')
     }
 

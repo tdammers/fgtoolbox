@@ -70,12 +70,6 @@ var create = function() {
     })
 
     return {
-        hide: function() {
-            container.hide()
-        },
-        show: function() {
-            container.show()
-        },
         elem: container
     }
 }
