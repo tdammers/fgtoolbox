@@ -24,6 +24,5 @@ cliAction :: forall rq rp.
           -> IO ()
 cliAction _ loadFGData args = do
   rq :: rq <- either error return $ fromArgs args
-  fgdata <- loadFGData
-  rp :: rp <- runAction fgdata rq
+  rp :: rp <- runAction loadFGData rq
   printResult putStr rp

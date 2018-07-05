@@ -63,14 +63,14 @@ apiAction :: forall rq rp e m.
              , IsString e
              )
           => Proxy rq
-          -> FGData
+          -> IO FGData
           -> Scotty.ActionT e m ()
-apiAction _ fgdata =
+apiAction _ loadFGD =
   go `Scotty.rescue` handle
   where
     go = do
       rq :: rq <- fromHttpRequest
-      rp :: rp <- io $ runAction fgdata rq
+      rp :: rp <- io $ runAction loadFGD rq
       Scotty.json rp
     handle e =
       Scotty.json $ ErrorResponse e

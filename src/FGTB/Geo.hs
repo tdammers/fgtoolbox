@@ -90,3 +90,28 @@ nmToFeet :: Distance -> Altitude
 nmToFeet (Distance nm) =
   mToFeet $ nm * metersPerNm
 
+bearingToRad :: Bearing -> Double
+bearingToRad (Bearing b) = b * pi / 180
+
+radToBearing :: Double -> Bearing
+radToBearing r = Bearing $ r * 180 / pi
+
+fromPolar :: Bearing -> Double -> (Double, Double)
+fromPolar dir dist =
+  let angle = bearingToRad dir
+  in (dist * sin angle, dist * cos angle)
+
+both :: (a -> a) -> (a, a) -> (a, a)
+both f (x, y) = (f x, f y)
+
+both2 :: (a -> b -> c) -> (a, a) -> (b, b) -> (c, c)
+both2 f (x, y) (z, w) = (f x z, f y w)
+
+solveWindTriangle :: Bearing -> Speed -> (Bearing, Speed) -> Bearing
+solveWindTriangle targetCourse (Speed airspeed) (windDir, Speed windSpeed) =
+  let beta = targetCourse + windDir
+      sinBeta = sin (bearingToRad beta)
+      sinGamma = (windSpeed / airspeed) * sinBeta
+      gamma = radToBearing (asin sinGamma)
+      alpha = targetCourse + gamma
+  in alpha

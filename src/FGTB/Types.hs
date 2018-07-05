@@ -101,6 +101,11 @@ newtype Distance =
   Distance Double
   deriving (Read, Show, Eq, Ord, Num, PrintfArg, Fractional, ToJSON, FromJSON)
 
+newtype Speed =
+  -- In knots
+  Speed Double
+  deriving (Read, Show, Eq, Ord, Num, PrintfArg, Fractional, ToJSON, FromJSON)
+
 newtype Altitude =
   -- In feet
   Altitude Double

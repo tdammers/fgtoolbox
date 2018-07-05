@@ -37,8 +37,10 @@ runServer loadFGD = do
         setHeader "Content-Type" contentType
         file $ "client" </> dirname </> filename
       get "/api/vornav/:from/:to" $
-        apiAction (Proxy :: Proxy VornavRequest) fgdata
+        apiAction (Proxy :: Proxy VornavRequest) (pure fgdata)
       get "/api/printroute/:waypoints" $
-        apiAction (Proxy :: Proxy PrintRouteRequest) fgdata
+        apiAction (Proxy :: Proxy PrintRouteRequest) (pure fgdata)
       get "/api/info/:waypoints" $
-        apiAction (Proxy :: Proxy WPInfoRequest) fgdata
+        apiAction (Proxy :: Proxy WPInfoRequest) (pure fgdata)
+      get "/api/wind" $
+        apiAction (Proxy :: Proxy WindCalcRequest) (pure fgdata)

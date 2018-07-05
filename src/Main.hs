@@ -63,4 +63,9 @@ main = do
           (Proxy :: Proxy PrintRouteRequest)
           loadFGD
           rem
+    "wind":rem -> do
+        cliAction
+          (Proxy :: Proxy WindCalcRequest)
+          loadFGD
+          rem
     xs -> error $ "Invalid arguments"

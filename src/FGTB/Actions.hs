@@ -30,10 +30,12 @@ import qualified Data.Text as Text
 import System.IO
 import Debug.Trace
 import Data.Monoid
-import Web.Scotty.Trans as Scotty
+import Web.Scotty.Trans (param)
+import qualified Web.Scotty.Trans as Scotty
 import Data.Aeson (Value (Object), object, (.=), ToJSON (..))
 import Control.Exception
 import Data.Char (toLower)
+import Text.Read (readMaybe)
 
 -- * VOR-to-VOR Navigation
 
@@ -75,7 +77,8 @@ instance PrintableResult VornavResponse where
     prn $ printf " (%1.1f nm)\n" dist
 
 instance Action VornavRequest VornavResponse where
-  runAction fgd (VornavRequest fromID toID) = do
+  runAction loadFGD (VornavRequest fromID toID) = do
+    fgd <- loadFGD
     let waypoints = fgdWaypoints fgd
         navs = fgdNavs fgd
         vors = filter isVor navs
@@ -152,7 +155,8 @@ instance PrintableResult PrintRouteResponse where
       printWP wpTo
 
 instance Action PrintRouteRequest PrintRouteResponse where
-  runAction fgd (PrintRouteRequest ids) = do
+  runAction loadFGD (PrintRouteRequest ids) = do
+    fgd <- loadFGD
     let waypoints = fgdWaypoints fgd
     case resolveRoute ids waypoints of
       Left wpID -> do
@@ -339,52 +343,107 @@ instance PrintableResult WPInfoResponse where
           dist (navID nav) radial bearing (show $ navFreq nav)
 
 instance Action WPXmlProcRequest WPXmlProcResponse where
-  runAction fgd (WPXmlProcRequest ty ids) = do
-    WPInfoResponse rdata <- runAction fgd (WPInfoRequest ids)
+  runAction loadFGD (WPXmlProcRequest ty ids) = do
+    WPInfoResponse rdata <- runAction loadFGD (WPInfoRequest ids)
     return $ WPXmlProcResponse ty rdata
 
 instance Action WPInfoRequest WPInfoResponse where
-  runAction fgd (WPInfoRequest ids) =
+  runAction = runWPInfoRequest
+
+runWPInfoRequest loadFGD (WPInfoRequest ids) = do
+    fgd <- loadFGD
+    let waypoints = fgdWaypoints fgd
+        navs = fgdNavs fgd
+        vors = filter (\nav -> isVor nav || isNdb nav) navs
+
+        runWP :: WPSpec -> Maybe Waypoint -> IO WPInfo
+        runWP spec Nothing = do
+          throw $ UserException $ "Waypoint not found: " <> show spec
+        runWP _ (Just wp) = do
+          let nearbyVors = nearestNavs (waypointLoc wp) $ vorsInRange (waypointLoc wp) vors
+              vorInfo vor =
+                let (dist, bearing, _) = llDiff (navLoc vor) (waypointLoc wp)
+                    radialRaw = bearing - navNorth vor
+                    radial =
+                      if radialRaw < 1 then
+                        radialRaw + 360
+                      else if radialRaw >= 361 then
+                        radialRaw - 360
+                      else
+                        radialRaw
+                in (dist, radial, bearing, vor)
+              details =
+                case wp of
+                  AirportWP ap -> 
+                    AirportInfo
+                      (airportName ap)
+                      [ RunwayInfo
+                          (Text.pack $ printf "%s/%s" (rwyStartName rwy) (rwyEndName rwy))
+                          (llDist (rwyStartLoc rwy) (rwyEndLoc rwy))
+                      | rwy <- airportRunways ap
+                      ]
+                  NavWP nav ->
+                    NavInfo
+                      (navName nav)
+                      (navFreq nav)
+                      (navRange nav)
+                  _ ->
+                    OtherWPInfo (waypointName wp)
+              nearbyVorsInfo =
+                map vorInfo nearbyVors
+          return $ WPInfo wp details nearbyVorsInfo
     WPInfoResponse <$>
       mapM (\id -> runWP id $ findWP id (fgdWaypoints fgd)) ids
-    where
-      waypoints = fgdWaypoints fgd
-      navs = fgdNavs fgd
-      vors = filter (\nav -> isVor nav || isNdb nav) navs
 
-      runWP :: WPSpec -> Maybe Waypoint -> IO WPInfo
-      runWP spec Nothing = do
-        throw $ UserException $ "Waypoint not found: " <> show spec
-      runWP _ (Just wp) = do
-        let nearbyVors = nearestNavs (waypointLoc wp) $ vorsInRange (waypointLoc wp) vors
-            vorInfo vor =
-              let (dist, bearing, _) = llDiff (navLoc vor) (waypointLoc wp)
-                  radialRaw = bearing - navNorth vor
-                  radial =
-                    if radialRaw < 1 then
-                      radialRaw + 360
-                    else if radialRaw >= 361 then
-                      radialRaw - 360
-                    else
-                      radialRaw
-              in (dist, radial, bearing, vor)
-            details =
-              case wp of
-                AirportWP ap -> 
-                  AirportInfo
-                    (airportName ap)
-                    [ RunwayInfo
-                        (Text.pack $ printf "%s/%s" (rwyStartName rwy) (rwyEndName rwy))
-                        (llDist (rwyStartLoc rwy) (rwyEndLoc rwy))
-                    | rwy <- airportRunways ap
-                    ]
-                NavWP nav ->
-                  NavInfo
-                    (navName nav)
-                    (navFreq nav)
-                    (navRange nav)
-                _ ->
-                  OtherWPInfo (waypointName wp)
-            nearbyVorsInfo =
-              map vorInfo nearbyVors
-        return $ WPInfo wp details nearbyVorsInfo
+data WindCalcRequest =
+  WindCalcRequest
+    { wcrqCourse :: Bearing
+    , wcrqWindDir :: Bearing
+    , wcrqWindSpeed :: Speed
+    , wcrqAirspeed :: Speed
+    }
+
+readEither :: Read a => String -> String -> Either String a
+readEither msg src = case readMaybe src of
+  Nothing -> Left $ "No parse: " ++ msg
+  Just x -> Right x
+
+instance FromArgs WindCalcRequest where
+  fromArgs [crsStr, airspeedStr, dirStr, speedStr] =
+    WindCalcRequest
+      <$> (Bearing <$> readEither "course" crsStr)
+      <*> (Bearing <$> readEither "wind direction" dirStr)
+      <*> (Speed <$> readEither "wind speed" speedStr)
+      <*> (Speed <$> readEither "airspeed" airspeedStr)
+  fromArgs _ =
+    Left "Invalid args, expected COURSE AIRSPEED WIND_DIR WIND_SPEED"
+
+instance FromHttpRequest WindCalcRequest where
+  fromHttpRequest =
+    WindCalcRequest
+      <$> (Bearing <$> Scotty.param "course")
+      <*> (Bearing <$> Scotty.param "wind-dir")
+      <*> (Speed <$> Scotty.param "wind-speed")
+      <*> (Speed <$> Scotty.param "airspeed")
+
+data WindCalcResponse =
+  WindCalcResponse
+    { wcrpHeading :: Bearing
+    }
+
+instance Action WindCalcRequest WindCalcResponse where
+  runAction _ rq =
+    return . WindCalcResponse $
+      solveWindTriangle
+        (wcrqCourse rq)
+        (wcrqAirspeed rq)
+        (wcrqWindDir rq, wcrqWindSpeed rq)
+
+instance PrintableResult WindCalcResponse where
+  printResult prn (WindCalcResponse heading) =
+    prn $ show heading
+
+instance ToJSON WindCalcResponse where
+  toJSON (WindCalcResponse heading) =
+    object
+      [ "heading" .= heading ]
