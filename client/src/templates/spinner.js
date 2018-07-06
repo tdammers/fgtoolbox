@@ -4,8 +4,8 @@ var common = require('./common')
 
 module.exports = {
     spinner: function(options) {
-      return h('div.spinnerOverlay',
-        h('div.spinnerContainer',
+      return h('div.spinner-overlay',
+        h('div.spinner-container',
           h('div.spinner',
             h('span', '\u2708')),
           h('div', 'Please wait...'),

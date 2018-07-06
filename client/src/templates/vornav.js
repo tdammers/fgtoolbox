@@ -1,20 +1,17 @@
 var R = require('ramda')
 var h = require('hyperscript')
 var common = require('./common')
+var f = require('./form-utils')
 
 module.exports = {
     form: function(data) {
         return h('form.vornav-form',
             h('h3', 'VOR-to-VOR'),
-            h('div.form-row',
-                h('label', {'for': 'from'}, 'from'),
-                h('input', {'type': 'text', 'name': 'from'})),
-            h('div.form-row',
-                h('label', {'for': 'to'}, 'to'),
-                h('input', {'type': 'text', 'name': 'to'})),
-            h('div.form-buttons',
-                h('button', {'type': 'submit'}, 'Route')),
-            h('div.result'))
+            f.section(
+                f.inputRows('from', 'to')),
+            f.section(
+                f.buttons(['Route'])),
+            h('div.result.form-section'))
     },
     result: function(data) {
         return h('div',

@@ -11,6 +11,6 @@ $(document).ready(function() {
     var vornav = components.vornav.create()
     var wind = components.wind.create()
     $('body')
-        .append($(vornav.elem))
         .append($(wind.elem))
+        .append($(vornav.elem))
 })
