@@ -19,12 +19,31 @@ var attachHandler = function (form, names, makeRequestURL, template) {
     var submitHandler = function (e) {
         var form = $(this)
         var getFormVal = function (name) {
-                    return $('[name=' + name + ']', form).val()
+                    var elem = $('[name=' + name + ']', form)
+                    var value = elem.val()
+                    switch (elem.attr('data-type')) {
+                        case 'bearing':
+                            switch (value) {
+                                case 'N': return 0
+                                case 'NE': return 45
+                                case 'E': return 90
+                                case 'SE': return 135
+                                case 'S': return 180
+                                case 'SW': return 225
+                                case 'W': return 270
+                                case 'NW': return 315
+                                default: return Number(value)
+                            }
+                        case 'speed':
+                        case 'number':
+                            return Number(value)
+                        default:
+                            return value
+                    }
                 }
         var rqData = R.zipObj(names, R.map(getFormVal, names))
         var resultbox = $('.result', form)
         spinnerOverlay.fadeIn()
-        resultbox.fadeOut()
 
         var success = function(data) {
             if (data.error) {
@@ -32,7 +51,7 @@ var attachHandler = function (form, names, makeRequestURL, template) {
             }
             try {
                 resultbox.empty()
-                resultbox.append($(template(data)).children())
+                resultbox.append($(template(R.assoc("request", rqData, data))).children())
                 resultbox.fadeIn()
             }
             catch (e) {

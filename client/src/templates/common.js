@@ -11,9 +11,12 @@ var formatFreq = function (freq) {
 }
 
 var formatHeading = function (degrees, precision, unit) {
-    if (R.isNil(degrees)) return null;
+    degrees = Number(degrees)
+    while (degrees < 0) {
+        degrees += 360
+    }
     var str, len
-    if (precision > 0) {
+    if (precision == 0) {
         len = 3
         str = degrees.toFixed(0)
     }

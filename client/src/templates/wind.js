@@ -10,12 +10,12 @@ module.exports = {
             h('div.column-container',
                 f.section('Aircraft',
                     f.inputRows(
-                        [ 'course', 'target course' ],
-                        [ 'airspeed', 'airspeed' ])),
+                        [ 'course', 'target course', 'text', 'bearing', 'degrees or N/S/W/E/...' ],
+                        [ 'airspeed', 'airspeed', 'text', 'speed', 'KTAS' ])),
                 f.section('Wind',
                     f.inputRows(
-                        [ 'windDir', 'direction' ],
-                        [ 'windSpeed', 'speed' ])),
+                        [ 'windDir', 'direction', 'text', 'bearing', 'degrees or N/S/W/E/...' ],
+                        [ 'windSpeed', 'speed', 'text', 'speed', 'KTAS' ])),
                 h('div.result.form-section')
             ),
             f.section(null,
@@ -23,6 +23,16 @@ module.exports = {
     },
     result: function(data) {
         return h('div',
-          h('h3', common.formatHeading(data.heading)))
+          h('h3', 'Heading: ', common.formatHeading(data.heading, 0)),
+          h('div',
+                'To track course ',
+                h('strong',
+                    common.formatHeading(data.request.course)),
+                ' with wind ',
+                h('strong',
+                    common.formatHeading(data.request.windDir, 0, '') + "@" + data.request.windSpeed.toFixed(0)),
+                ', you need a heading of ',
+                h('strong',
+                    common.formatHeading(data.heading, 2))))
     }
 }

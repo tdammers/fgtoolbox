@@ -11,7 +11,6 @@ h1, h2, h3, h4, h5, h6, p {
 .form-section {
     padding: 1rem;
     margin: 1rem 0;
-    background: #EEE;
 }
 
 .form-row>label {
@@ -39,17 +38,22 @@ form {
     padding: 1rem;
 }
 
+.container {
+    overflow: hidden;
+    position: relative;
+}
+
 .vornav-result {
     height: 20rem;
     overflow: auto;
 }
 
 .spinner-overlay {
-    position: fixed;
+    position: absolute;
     display: flex;
     justify-content: center;
     align-items: center;
-    background-color: rgba(128,128,128,0.5);
+    background-color: rgba(255,255,255,0.8);
     left: 0;
     right: 0;
     top: 0;
@@ -86,4 +90,21 @@ form {
     to {
         transform: rotate(360deg);
     }
+}
+
+.tabber-tab {
+    display: inline-block;
+    background: #CCC;
+    padding: 0.75rem 1rem 0.5rem 1rem;
+    font-weight: bold;
+    margin-right: 0.5rem;
+    cursor: pointer;
+}
+
+.tabber-tab.active {
+    background-color: #EEE;
+}
+
+.tabber-body {
+    border: solid 0.5rem #EEE;
 }

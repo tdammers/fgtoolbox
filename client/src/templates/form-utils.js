@@ -2,26 +2,32 @@ var R = require('ramda')
 var h = require('hyperscript')
 
 var inputRow = function (options) {
-    var name, label, type
+    var name, label, type, dataType, hint
     if (typeof(options) === 'string') {
         name = options
         label = arguments[1] || name
         type = arguments[2] || 'text'
+        dataType = arguments[3] || 'text'
+        hint = arguments[4] || ''
     }
     else if (Array.isArray(options)) {
         name = options[0] || ''
         label = options[1] || name
         type = options[2] || 'text'
+        dataType = options[3] || 'text'
+        hint = options[4] || ''
     }
     else {
         name = options['name'] || ''
         label = options['label'] || name
         type = options['type'] || 'text'
+        dataType = options['dataType'] || 'text'
+        hint = options['hint'] || ''
     }
 
     return h('div.form-row',
         h('label', {'for': name}, label),
-        h('input', {'type': type, 'name': name}))
+        h('input', {'type': type, 'name': name, 'data-type': dataType, 'placeholder': hint}))
 }
 
 var inputRows = function () {

@@ -10,7 +10,17 @@ module.exports = {
             h('div.column-container',
                 h('div',
                     f.section(
-                        f.inputRows('from', 'to')),
+                        f.inputRows(
+                            {
+                                name: 'from',
+                                title: 'departure',
+                                hint: 'ICAO airport code or NAV ID'
+                            },
+                            {
+                                name: 'to',
+                                title: 'destination',
+                                hint: 'ICAO airport code or NAV ID'
+                            })),
                     f.section(
                         f.buttons(['Route']))),
                 h('div.result.form-section')))
@@ -18,10 +28,11 @@ module.exports = {
     result: function(data) {
         return h('div',
               h('h3',
-                'From ',
+                'Departure: ',
                 data.from.id,
-                h('small', ' (', data.from.name, ')'),
-                ' to ',
+                h('small', ' (', data.from.name, ')')),
+              h('h3',
+                'Destination: ',
                 data.to.id,
                 h('small', ' (', data.to.name, ')')),
               h('h4', data.dist.toFixed(1), ' nm'),
