@@ -7,11 +7,13 @@ module.exports = {
     form: function(data) {
         return h('form.vornav-form',
             h('h3', 'VOR-to-VOR'),
-            f.section(
-                f.inputRows('from', 'to')),
-            f.section(
-                f.buttons(['Route'])),
-            h('div.result.form-section'))
+            h('div.column-container',
+                h('div',
+                    f.section(
+                        f.inputRows('from', 'to')),
+                    f.section(
+                        f.buttons(['Route']))),
+                h('div.result.form-section')))
     },
     result: function(data) {
         return h('div',
