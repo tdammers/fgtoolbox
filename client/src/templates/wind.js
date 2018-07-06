@@ -23,7 +23,6 @@ module.exports = {
     },
     result: function(data) {
         return h('div',
-          h('h3',
-            'Required heading: ' + Math.round(data.heading)))
+          h('h3', common.formatHeading(data.heading)))
     }
 }
