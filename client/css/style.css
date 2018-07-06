@@ -26,6 +26,7 @@ h1, h2, h3, h4, h5, h6, p {
     display: inline-block;
     vertical-align: top;
     margin-right: 1rem;
+    min-width: 10rem;
 }
 
 .templates {
@@ -38,7 +39,7 @@ form {
     padding: 1rem;
 }
 
-.result {
+.vornav-result {
     height: 20rem;
     overflow: auto;
 }

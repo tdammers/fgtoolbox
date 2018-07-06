@@ -15,11 +15,11 @@ module.exports = {
                 f.section('Wind',
                     f.inputRows(
                         [ 'windDir', 'direction' ],
-                        [ 'windSpeed', 'speed' ]))
+                        [ 'windSpeed', 'speed' ])),
+                h('div.result.form-section')
             ),
             f.section(null,
-                f.buttons(['Calculate'])),
-            h('div.result.form-section'))
+                f.buttons(['Calculate'])))
     },
     result: function(data) {
         return h('div',
