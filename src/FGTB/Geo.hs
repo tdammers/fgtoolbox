@@ -109,7 +109,7 @@ both2 f (x, y) (z, w) = (f x z, f y w)
 
 solveWindTriangle :: Bearing -> Speed -> (Bearing, Speed) -> Bearing
 solveWindTriangle targetCourse (Speed airspeed) (windDir, Speed windSpeed) =
-  let beta = targetCourse + windDir
+  let beta = targetCourse - (windDir + 180)
       sinBeta = sin (bearingToRad beta)
       sinGamma = (windSpeed / airspeed) * sinBeta
       gamma = radToBearing (asin sinGamma)

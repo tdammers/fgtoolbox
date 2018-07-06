@@ -143,7 +143,6 @@ data WPSpec
 
 parseWPSpec :: String -> WPSpec
 parseWPSpec src =
-  trace ("src: " ++ src) $
   fromMaybe (WPSpecID . NavID . Text.pack $ src) $
     P.parseMaybe specP src
   where
@@ -169,15 +168,11 @@ parseWPSpec src =
     offsetSpecP :: P.Parsec () String WPSpec
     offsetSpecP = do
       dist <- Distance <$> doubleP
-      traceM $ "dist: " ++ show dist
       distNav <- navIDP
-      traceM $ "distNav: " ++ show distNav
       radialNav <- fmap (fromMaybe distNav) . P.optional $ do
         P.char ','
         navIDP
-      traceM $ "radialNav: " ++ show radialNav
       radial <- Bearing <$> doubleP
-      traceM $ "radial: " ++ show radial
       return . WPSpecOfs $ NavOffsetSpec radialNav radial distNav dist
       
 
@@ -219,8 +214,7 @@ parseWPSpec src =
       return . readTraced $ intpart ++ "." ++ fracpart
 
 readTraced :: Read a => String -> a
-readTraced str =
-  trace str $ read str
+readTraced = read
 
 data Fix = Fix { fixID :: NavID, fixLoc :: LatLng }
   deriving (Read, Show, Eq)
